@@ -111,6 +111,8 @@ const room = {
   phase: 'lobby',    // lobby | bidding | playing | hand-result | game-over
   dealer: 0,
   hands: [null,null,null,null],
+  initialHands: [null,null,null,null],  // saved at deal for training data
+  allBids: [],       // all bids placed this hand [{seat, bid}]
   bidState: null,
   bidTurnIdx: 0,
   trump: null,
@@ -159,6 +161,8 @@ function startGame() {
 function startHand() {
   room.handNum++;
   room.hands = dealHands();
+  room.initialHands = room.hands.map(h => h.map(c => ({ rank: c.rank, suit: c.suit })));
+  room.allBids = [];
   room.bidState = new BidState(room.dealer);
   room.trump = null;
   room.tricks = [];
@@ -228,6 +232,7 @@ function handleBid(seat, bid) {
   if (!legal.includes(bid)) return;
 
   room.bidState.placeBid(seat, bid);
+  room.allBids.push({ seat, bid });
   broadcast({
     type: 'bid-placed',
     seat: seat,
@@ -349,6 +354,9 @@ function finishHand() {
 
   room.phase = 'hand-result';
 
+  // Build trick history for training data
+  const trickHistory = room.tricks.map(t => t.cards.map(tc => ({ player: tc.player, card: tc.card })));
+
   broadcast({
     type: 'hand-result',
     scoring: {
@@ -365,6 +373,14 @@ function finishHand() {
     winner: winner,
     teams: room.teams,
     players: room.players.map((p,i) => p ? { name: p.name, seat: i, team: room.teams[i] } : null),
+    // Full training data — all 4 hands, all bids, all tricks
+    trainingData: {
+      initialHands: room.initialHands,
+      allBids: room.allBids,
+      tricks: trickHistory,
+      trump: room.trump,
+      dealer: room.dealer,
+    },
   });
 
   if (winner !== null) {
@@ -415,7 +431,11 @@ wss.on('connection', (ws) => {
         ws.send(JSON.stringify({ type: 'joined', seat: mySeat, name: msg.name }));
         broadcastLobby();
 
+        // Notify everyone this player reconnected
+        broadcast({ type: 'player-reconnected', seat: mySeat, name: msg.name });
+
         if (room.phase !== 'lobby') {
+          // Resend full game state to reconnected player
           sendTo(mySeat, {
             type: 'hand-dealt',
             hand: room.hands[mySeat],
@@ -425,9 +445,35 @@ wss.on('connection', (ws) => {
             teams: room.teams,
             players: room.players.map((p,i) => p ? { name: p.name, seat: i, team: room.teams[i] } : null),
           });
-          if (room.trump !== null) sendTo(mySeat, { type: 'trump-set', trump: room.trump });
+          if (room.trump !== null) sendTo(mySeat, { type: 'trump-set', trump: room.trump, pitcherName: room.players[room.bidder] ? room.players[room.bidder].name : '' });
+          if (room.bidder !== null) sendTo(mySeat, { type: 'bid-won', bidder: room.bidder, bidAmount: room.bidAmount, bidderName: room.players[room.bidder].name });
           if (room.currentTrick.length > 0) {
             sendTo(mySeat, { type: 'trick-state', currentTrick: room.currentTrick, trickNum: room.trickNum });
+          }
+
+          // Re-trigger current turn if it was waiting on someone
+          if (room.phase === 'bidding') {
+            const order = room.bidState.biddingOrder();
+            const currentBidSeat = order[room.bidTurnIdx];
+            // Re-broadcast whose turn it is
+            broadcast({ type: 'bid-turn', seat: currentBidSeat, playerName: room.players[currentBidSeat].name });
+            if (currentBidSeat === mySeat) {
+              const legal = room.bidState.legalBids(mySeat);
+              sendTo(mySeat, { type: 'your-bid', legalBids: legal, currentBid: room.bidState.currentBid });
+            }
+          } else if (room.phase === 'playing') {
+            const currentPlaySeat = (room.leader + room.currentTrick.length) % 4;
+            broadcast({ type: 'play-turn', seat: currentPlaySeat, playerName: room.players[currentPlaySeat].name, trickNum: room.trickNum, currentTrick: room.currentTrick });
+            if (currentPlaySeat === mySeat) {
+              const hand = room.hands[mySeat];
+              const tc = room.currentTrick.map(x => ({ player: x.player, card: Card.from(x.card) }));
+              const isPitch = room.trickNum === 0 && room.currentTrick.length === 0 && room.trump === null;
+              const legal = isPitch ? [...hand] : legalPlays(hand, tc, room.trump);
+              sendTo(mySeat, { type: 'your-turn', legalPlays: legal, isPitch, currentTrick: room.currentTrick });
+            }
+          } else if (room.phase === 'hand-result') {
+            // Resend hand result so they see the score screen
+            sendTo(mySeat, { type: 'hand-result', scoring: { highTeam: null, lowTeam: null, jackCaptured: false, jackTeam: null, gameTeam: null, gp: {0:0,1:0}, points: {0:0,1:0}, tricksWon: {0:0,1:0} }, bidder: room.bidder, bidAmount: room.bidAmount, made: true, scores: room.scores, winner: null, teams: room.teams, players: room.players.map((p,i) => p ? { name: p.name, seat: i, team: room.teams[i] } : null) });
           }
         }
         break;

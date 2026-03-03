@@ -546,6 +546,11 @@ function handleMessage(msg) {
       log(`${msg.name} disconnected`, 'highlight');
       showWaiting(`${msg.name} disconnected — waiting for reconnect...`);
       break;
+
+    case 'player-reconnected':
+      log(`${msg.name} reconnected`, 'highlight');
+      hideWaiting();
+      break;
   }
 }
 
@@ -786,8 +791,8 @@ function showHandResult(msg) {
   document.getElementById('next-hand-btn').style.display = isHost ? '' : 'none';
   el.classList.add('show');
 
-  // GameLog finish
-  GameLog.finishHand({points: s.points, tricksWon: s.tricksWon, jackCaptured: s.jackCaptured, jackTeam: s.jackTeam, lowTeam: s.lowTeam}, msg.bidder, msg.bidAmount, trump);
+  // GameLog finish — now with full training data from server
+  GameLog.finishHand({points: s.points, tricksWon: s.tricksWon, jackCaptured: s.jackCaptured, jackTeam: s.jackTeam, lowTeam: s.lowTeam}, msg.bidder, msg.bidAmount, trump, msg.trainingData);
 
   if (msg.winner !== null) {
     setTimeout(() => {
@@ -815,17 +820,33 @@ const GameLog = {
     this.currentHand = { dealer, bidder:null, bid_level:null, trump_suit:null,
       team_scores:[scores[0],scores[1]], initial_hands: hands.map(h=>h.map(c=>[c.rank,c.suit])), decisions:[], bids:[], outcome:null };
   },
-  finishHand(scoring, bidder, bidAmount, trump) {
+  finishHand(scoring, bidder, bidAmount, trump, trainingData) {
     if (!this.currentHand) return;
-    if (this.currentHand.decisions.length===0 && (!this.currentHand.bids || this.currentHand.bids.length===0)) { this.currentHand=null; return; }
     const bt = teamOf(bidder);
-    this.currentHand.bidder = bidder; this.currentHand.bid_level = bidAmount; this.currentHand.trump_suit = trump;
-    this.currentHand.outcome = { bidder_pts: scoring.points[bt], jack_captured: scoring.jackCaptured && scoring.jackTeam===bt, low_captured: scoring.lowTeam!==null && scoring.lowTeam===bt };
-    this.games.push(this.currentHand); this.currentHand = null; this._updateCounter();
+    this.currentHand.bidder = bidder;
+    this.currentHand.bid_level = bidAmount;
+    this.currentHand.trump_suit = trump;
+    this.currentHand.outcome = {
+      bidder_pts: scoring.points[bt],
+      jack_captured: scoring.jackCaptured && scoring.jackTeam===bt,
+      low_captured: scoring.lowTeam!==null && scoring.lowTeam===bt,
+      points: scoring.points,
+      tricksWon: scoring.tricksWon,
+    };
+    // Merge full training data from server (all 4 hands, all bids, all tricks)
+    if (trainingData) {
+      this.currentHand.initial_hands = trainingData.initialHands.map(h => h.map(c => [c.rank, c.suit]));
+      this.currentHand.all_bids = trainingData.allBids;
+      this.currentHand.tricks = trainingData.tricks.map(t => t.map(tc => ({ player: tc.player, card: [tc.card.rank, tc.card.suit] })));
+      this.currentHand.teams = teams;
+    }
+    this.games.push(this.currentHand);
+    this.currentHand = null;
+    this._updateCounter();
   },
   exportJSON() {
-    if (this.totalDecisions===0 && this.games.length===0) { alert('No data logged yet.'); return; }
-    const data = { version:'7.6-mp', exported_at: new Date().toISOString(), hands_played: this.games.length, total_decisions: this.totalDecisions, games: this.games };
+    if (this.games.length===0) { alert('No data logged yet.'); return; }
+    const data = { version:'7.6-mp-full', exported_at: new Date().toISOString(), hands_played: this.games.length, total_decisions: this.totalDecisions, player_seat: mySeat, player_name: myName, games: this.games };
     const json = JSON.stringify(data);
     const blob = new Blob([json], {type:'application/json;charset=utf-8'});
     const fname = `mp_gameplay_${Date.now()}.json`;
