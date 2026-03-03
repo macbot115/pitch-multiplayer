@@ -71,9 +71,9 @@ body {
 #game-info { font-size: 10px; opacity: 0.6; display: flex; align-items: center; gap: 6px; }
 
 #host-indicator {
-  position: absolute; top: 62px; left: 50%; transform: translateX(-50%);
-  font-size: 10px; color: #ffd700; opacity: 0.7; z-index: 20;
+  font-size: 10px; color: #ffd700; opacity: 0.7;
   font-weight: 600; letter-spacing: 0.5px; white-space: nowrap;
+  margin-left: 6px;
 }
 
 #trump-indicator {
@@ -302,7 +302,7 @@ body {
   .score-label { font-size: 9px; letter-spacing: 0.5px; }
   .score-val { font-size: 14px; min-width: 18px; }
   #game-info { font-size: 8px; }
-  #host-indicator { top: 46px; font-size: 9px; }
+  #host-indicator { font-size: 8px; margin-left: 4px; }
 
   /* Trump indicator */
   #trump-indicator { top: 12px; left: 12px; padding: 6px 10px; border-radius: 10px; font-size: 12px; }
@@ -404,8 +404,8 @@ body {
     <div class="score-team"><span class="score-label team0-color" id="team0-label">Team A</span><span class="score-val team0-color" id="score0">0</span></div>
     <div id="game-info"><span id="hand-num">—</span></div>
     <div class="score-team"><span class="score-val team1-color" id="score1">0</span><span class="score-label team1-color" id="team1-label">Team B</span></div>
+    <span id="host-indicator"></span>
   </div>
-  <div id="host-indicator"></div>
   <div id="lobby-controls">
     <button class="ctrl-btn lobby-btn" id="randomize-teams-btn" onclick="send({type:'randomize-teams'})">Shuffle Teams</button>
     <button class="ctrl-btn lobby-btn" id="randomize-dealer-btn" onclick="send({type:'randomize-dealer'})">Shuffle Dealer</button>
@@ -536,11 +536,11 @@ function send(msg) { if (ws && ws.readyState === 1) ws.send(JSON.stringify(msg))
 
 function updateHostIndicator() {
   const el = document.getElementById('host-indicator');
-  if (isHost) {
-    el.textContent = 'You are the host';
+  const hostName = playerNames[hostSeat] || '';
+  if (hostName) {
+    el.textContent = `★ Host: ${hostName}`;
   } else {
-    const hostName = playerNames[hostSeat] || '';
-    el.textContent = hostName ? `Host: ${hostName}` : '';
+    el.textContent = '';
   }
 }
 
@@ -798,9 +798,9 @@ function updateLobby(players) {
     }
   }
 
-  // Show lobby control buttons for all joined players
+  // Show lobby control buttons for HOST only
   const lobbyBtns = document.querySelectorAll('.lobby-btn');
-  if (mySeat >= 0) {
+  if (mySeat >= 0 && isHost) {
     lobbyBtns.forEach(b => b.classList.add('show'));
     const startBtn = document.getElementById('start-game-btn');
     startBtn.disabled = count < 4;
