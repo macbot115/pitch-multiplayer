@@ -1,0 +1,846 @@
+<!DOCTYPE html>
+<html lang="en"><head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Pitch Multiplayer - Hi-Lo-Jack</title>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+body {
+  font-family: -apple-system, 'SF Pro Text', 'Helvetica Neue', system-ui, sans-serif;
+  background: #0a0a14;
+  color: #e0e0e0;
+  overflow: hidden;
+  height: 100vh;
+  user-select: none;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+}
+
+#table {
+  position: relative;
+  width: 100vw;
+  height: 100vh;
+  overflow: hidden;
+  background: linear-gradient(180deg, #5a3a1a 0%, #7a4e28 3%, #5a3a1a 6%, #3d2510 8%), #3d2510;
+}
+#table::before {
+  content: '';
+  position: absolute;
+  inset: 22px;
+  border-radius: 40px;
+  background:
+    radial-gradient(ellipse 55% 45% at 50% 42%, rgba(80,160,60,0.25) 0%, transparent 70%),
+    radial-gradient(ellipse at center, #1e7a2e 0%, #166b24 25%, #0f5a1a 50%, #0a4012 75%, #062a0c 100%);
+  box-shadow:
+    inset 0 0 120px rgba(0,0,0,0.3),
+    inset 0 0 40px rgba(0,0,0,0.15),
+    0 0 0 3px #2a1a08, 0 0 0 5px #4a3018, 0 0 0 6px #2a1a08;
+  pointer-events: none;
+  z-index: 0;
+}
+#table::after {
+  content: '';
+  position: absolute;
+  inset: 22px;
+  border-radius: 40px;
+  pointer-events: none;
+  z-index: 1;
+  opacity: 0.12;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  background-size: 256px 256px;
+  mix-blend-mode: overlay;
+}
+
+/* ── SCORES ── */
+#scoreboard {
+  position: absolute; top: 28px; left: 50%; transform: translateX(-50%);
+  display: flex; gap: 24px;
+  background: rgba(10,8,5,0.75); padding: 8px 24px; border-radius: 20px;
+  font-size: 13px; z-index: 20;
+  backdrop-filter: blur(12px);
+  border: 1px solid rgba(255,215,0,0.15);
+  box-shadow: 0 4px 20px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.05);
+}
+.score-team { display: flex; align-items: center; gap: 6px; }
+.score-label { opacity: 1; font-size: 12px; text-transform: uppercase; letter-spacing: 1px; font-weight: 700; }
+.score-val { font-weight: 700; font-size: 18px; min-width: 24px; text-align: center; text-shadow: 0 0 8px currentColor; }
+.team0-color { color: #6ec6ff; }
+.team1-color { color: #ff6b6b; }
+#game-info { font-size: 10px; opacity: 0.6; display: flex; align-items: center; gap: 6px; }
+
+#trump-indicator {
+  position: absolute; top: 28px; left: 28px;
+  display: flex; flex-direction: column; align-items: flex-start; gap: 4px;
+  background: rgba(10,8,5,0.8); padding: 10px 18px; border-radius: 14px;
+  font-weight: 700; color: #ffd700; font-size: 16px;
+  border: 1px solid rgba(255,215,0,0.3); backdrop-filter: blur(12px); z-index: 20;
+  box-shadow: 0 4px 20px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.05);
+}
+#trump-indicator .trump-row { display: flex; align-items: center; gap: 8px; }
+#trump-indicator .trump-label { font-size: 13px; opacity: 0.7; text-transform: uppercase; letter-spacing: 1.5px; font-weight: 600; }
+#trump-indicator .trump-icon { font-size: 32px; filter: drop-shadow(0 0 6px rgba(255,215,0,0.4)) drop-shadow(0 2px 4px rgba(0,0,0,0.5)); }
+#trump-indicator .bidder-info { font-size: 13px; color: #e0e0e0; font-weight: 600; opacity: 1; }
+#trump-indicator.hidden { display: none; }
+
+/* ── PLAYER AREAS ── */
+.player-area { position: absolute; display: flex; flex-direction: column; align-items: center; gap: 4px; z-index: 3; }
+.player-area.south { bottom: 28px; left: 50%; transform: translateX(-50%); }
+.player-area.north { top: 80px; left: 50%; transform: translateX(-50%); }
+.player-area.west  { left: 70px; top: 34%; transform: translateY(-50%); flex-direction: row-reverse; align-items: center; gap: 16px; }
+.player-area.east  { right: 70px; top: 34%; transform: translateY(-50%); flex-direction: row; align-items: center; gap: 16px; }
+
+.player-label {
+  font-size: 13px; font-weight: 700; padding: 5px 16px; border-radius: 12px;
+  background: rgba(10,8,5,0.75); white-space: nowrap;
+  backdrop-filter: blur(8px); z-index: 5; position: relative;
+  border: 1px solid rgba(255,255,255,0.1);
+  box-shadow: 0 2px 10px rgba(0,0,0,0.3); text-shadow: 0 1px 2px rgba(0,0,0,0.5);
+}
+.player-label.active-turn {
+  background: rgba(255,215,0,0.25); color: #ffd700;
+  box-shadow: 0 0 16px rgba(255,215,0,0.3), 0 2px 10px rgba(0,0,0,0.3);
+  border-color: rgba(255,215,0,0.4);
+}
+.player-label .dealer-chip {
+  display: inline-block;
+  background: linear-gradient(135deg, #ffe44d, #ffc400, #e6a800);
+  color: #000; font-size: 11px; font-weight: 800; padding: 2px 8px;
+  border-radius: 8px; margin-left: 6px;
+  box-shadow: 0 0 10px rgba(255,215,0,0.5), 0 2px 4px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.4);
+  letter-spacing: 0.5px; text-transform: uppercase;
+}
+
+/* ── CARDS ── */
+.hand { display: flex; justify-content: center; }
+.hand.south { gap: 2px; }
+.card {
+  width: 88px; height: 126px; border-radius: 10px;
+  display: flex; flex-direction: column; font-size: 20px; font-weight: 700;
+  cursor: default; transition: transform 0.2s cubic-bezier(0.25,0.46,0.45,0.94), box-shadow 0.2s;
+  position: relative; flex-shrink: 0;
+  font-family: 'Georgia', 'Times New Roman', serif;
+}
+.card-front {
+  background: linear-gradient(160deg, #ffffff 0%, #fafaf5 30%, #f5f5ef 60%, #eeeee6 100%);
+  border: 1px solid #b8b8b0;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.45), 0 1px 3px rgba(0,0,0,0.25),
+    inset 0 0 0 1px rgba(255,255,255,0.7), inset 0 1px 0 rgba(255,255,255,0.9);
+  padding: 4px 6px; justify-content: space-between;
+}
+.card-front.red { color: #b71c1c; }
+.card-front.black { color: #1a1a1a; }
+.card-front .card-tl { display: flex; flex-direction: column; align-items: center; line-height: 1; position: absolute; top: 4px; left: 5px; }
+.card-front .card-tl .card-rank { font-size: 17px; font-weight: 700; }
+.card-front .card-tl .card-suit-sm { font-size: 14px; margin-top: -1px; }
+.card-front .card-br { display: flex; flex-direction: column; align-items: center; line-height: 1; position: absolute; bottom: 4px; right: 5px; transform: rotate(180deg); }
+.card-front .card-br .card-rank { font-size: 17px; font-weight: 700; }
+.card-front .card-br .card-suit-sm { font-size: 14px; margin-top: -1px; }
+.card-front .card-center { position: absolute; top: 50%; left: 50%; transform: translate(-50%,-50%); font-size: 38px; line-height: 1; opacity: 0.85; filter: drop-shadow(0 1px 1px rgba(0,0,0,0.1)); }
+.card-back {
+  background: linear-gradient(145deg, #1e4080, #152d5e, #0f2248);
+  border: 2px solid #3060a8;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.5), 0 1px 3px rgba(0,0,0,0.3), inset 0 1px 0 rgba(255,255,255,0.1);
+  overflow: hidden;
+}
+.card-back::before { content: ''; position: absolute; inset: 5px; border: 1.5px solid rgba(255,215,0,0.15); border-radius: 5px; background: repeating-linear-gradient(45deg, transparent, transparent 4px, rgba(255,255,255,0.03) 4px, rgba(255,255,255,0.03) 8px); }
+.card-back::after { content: ''; position: absolute; top: 50%; left: 50%; transform: translate(-50%,-50%); width: 30px; height: 30px; border-radius: 50%; background: radial-gradient(circle, rgba(255,215,0,0.25), rgba(255,215,0,0.08) 50%, transparent 70%); border: 1px solid rgba(255,215,0,0.2); box-shadow: 0 0 8px rgba(255,215,0,0.1); }
+.card.playable { cursor: pointer; border: 2px solid rgba(255,215,0,0.6); box-shadow: 0 4px 12px rgba(0,0,0,0.45), 0 0 10px rgba(255,215,0,0.15); }
+.card.playable:hover { transform: translateY(-16px) scale(1.06); box-shadow: 0 12px 30px rgba(0,0,0,0.5), 0 0 24px rgba(255,215,0,0.3); z-index: 10; border-color: #ffd700; }
+.opp-hand { position: relative; display: flex; align-items: center; justify-content: center; }
+.opp-hand .card-count { position: absolute; bottom: -2px; right: -6px; background: rgba(10,8,5,0.85); color: #fff; font-size: 11px; font-weight: 700; width: 22px; height: 22px; border-radius: 50%; display: flex; align-items: center; justify-content: center; border: 1px solid rgba(255,255,255,0.25); box-shadow: 0 2px 6px rgba(0,0,0,0.4); }
+.card.opp-card { width: 64px; height: 90px; }
+.player-area.west .opp-hand, .player-area.east .opp-hand { flex-direction: column; align-items: center; }
+.player-area.west .opp-hand .rotated-card { transform: rotate(90deg); margin: -16px 0; }
+.player-area.west .opp-hand .rotated-card .card-count { transform: rotate(-90deg); }
+.player-area.east .opp-hand .rotated-card { transform: rotate(-90deg); margin: -16px 0; }
+.player-area.east .opp-hand .rotated-card .card-count { transform: rotate(90deg); }
+
+/* ── TRICK AREA ── */
+#trick-area { position: absolute; top: 48%; left: 50%; transform: translate(-50%,-50%); width: 300px; height: 260px; z-index: 3; }
+.trick-card { position: absolute; opacity: 1; transition: all 0.35s cubic-bezier(0.25,0.46,0.45,0.94); }
+.trick-card.pos-south { bottom: 0; left: 50%; transform: translateX(-50%); }
+.trick-card.pos-north { top: 0; left: 50%; transform: translateX(-50%); }
+.trick-card.pos-west  { left: 0; top: 50%; transform: translateY(-50%); }
+.trick-card.pos-east  { right: 0; top: 50%; transform: translateY(-50%); }
+.trick-card.card-enter-south { opacity: 0; bottom: -60px; }
+.trick-card.card-enter-north { opacity: 0; top: -60px; }
+.trick-card.card-enter-west  { opacity: 0; left: -60px; }
+.trick-card.card-enter-east  { opacity: 0; right: -60px; }
+.trick-card .winner-glow { position: absolute; inset: -4px; border: 3px solid #ffd700; border-radius: 12px; box-shadow: 0 0 16px rgba(255,215,0,0.5), 0 0 4px rgba(255,215,0,0.3); display: none; }
+.trick-card.fly-to-south { bottom: -180px !important; left: 50% !important; opacity: 0; transform: translateX(-50%) scale(0.5) !important; transition: all 0.5s cubic-bezier(0.4,0,0.2,1) !important; }
+.trick-card.fly-to-north { top: -180px !important; left: 50% !important; opacity: 0; transform: translateX(-50%) scale(0.5) !important; transition: all 0.5s cubic-bezier(0.4,0,0.2,1) !important; }
+.trick-card.fly-to-west  { left: -180px !important; top: 50% !important; opacity: 0; transform: translateY(-50%) scale(0.5) !important; transition: all 0.5s cubic-bezier(0.4,0,0.2,1) !important; }
+.trick-card.fly-to-east  { right: -180px !important; top: 50% !important; opacity: 0; transform: translateY(-50%) scale(0.5) !important; transition: all 0.5s cubic-bezier(0.4,0,0.2,1) !important; }
+
+/* ── BIDDING ── */
+#bid-panel { position: absolute; bottom: 200px; left: 50%; transform: translateX(-50%); display: none; flex-direction: column; align-items: center; gap: 8px; z-index: 30; }
+#bid-panel.show { display: flex; }
+#bid-prompt { font-size: 14px; color: #ffd700; font-weight: 700; text-shadow: 0 2px 6px rgba(0,0,0,0.7); }
+#bid-buttons { display: flex; gap: 8px; }
+.bid-btn { padding: 10px 20px; border: none; border-radius: 12px; font-size: 14px; font-weight: 700; cursor: pointer; transition: transform 0.1s, box-shadow 0.15s; min-width: 50px; box-shadow: 0 3px 10px rgba(0,0,0,0.3); }
+.bid-btn:hover { transform: scale(1.08); box-shadow: 0 5px 16px rgba(0,0,0,0.4); }
+.bid-btn:active { transform: scale(0.96); }
+.bid-btn.pass { background: linear-gradient(135deg, #546e7a, #37474f); color: #fff; border: 1px solid rgba(255,255,255,0.1); }
+.bid-btn.bid-val { background: linear-gradient(135deg, #ffc107, #f9a825, #f57f17); color: #000; border: 1px solid rgba(255,255,255,0.2); }
+.bid-btn:disabled { opacity: 0.3; cursor: not-allowed; transform: none; box-shadow: none; }
+
+/* ── BID BUBBLES ── */
+.bid-bubble { position: absolute; background: rgba(10,8,5,0.8); color: #fff; padding: 5px 14px; border-radius: 14px; font-size: 13px; font-weight: 600; white-space: nowrap; z-index: 15; backdrop-filter: blur(8px); animation: fadeInBubble 0.3s ease; pointer-events: none; border: 1px solid rgba(255,255,255,0.1); box-shadow: 0 3px 12px rgba(0,0,0,0.4); }
+.bid-bubble.south { bottom: 170px; left: 50%; transform: translateX(-50%); }
+.bid-bubble.north { top: 225px; left: 50%; transform: translateX(-50%); }
+.bid-bubble.west  { left: 210px; top: 34%; transform: translateY(-50%); }
+.bid-bubble.east  { right: 210px; top: 34%; transform: translateY(-50%); }
+@keyframes fadeInBubble { from { opacity: 0; transform: translateX(-50%) scale(0.8); } to { opacity: 1; transform: translateX(-50%) scale(1); } }
+
+/* ── LOG ── */
+#log-panel { position: absolute; bottom: 28px; right: 28px; width: 280px; max-height: 260px; overflow-y: auto; background: rgba(10,8,5,0.75); border-radius: 14px; padding: 10px 14px; font-size: 12px; line-height: 1.6; z-index: 20; backdrop-filter: blur(12px); border: 1px solid rgba(255,255,255,0.08); box-shadow: 0 4px 20px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.04); }
+#log-panel::-webkit-scrollbar { width: 4px; }
+#log-panel::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.25); border-radius: 3px; }
+.log-entry { opacity: 1; padding: 1px 0; font-weight: 600; }
+.log-entry.highlight { color: #ffd700; font-weight: 700; }
+.log-entry.score-change { color: #81c784; font-weight: 700; }
+
+/* ── CONTROLS ── */
+#top-controls { position: absolute; top: 28px; right: 28px; display: flex; gap: 4px; z-index: 20; }
+.ctrl-btn { padding: 6px 12px; border: 1px solid rgba(255,255,255,0.2); border-radius: 8px; background: rgba(10,8,5,0.7); color: #e0e0e0; font-size: 11px; font-weight: 600; cursor: pointer; backdrop-filter: blur(8px); transition: background 0.15s, box-shadow 0.15s; white-space: nowrap; box-shadow: 0 2px 8px rgba(0,0,0,0.3); }
+.ctrl-btn:hover { background: rgba(255,255,255,0.12); box-shadow: 0 3px 12px rgba(0,0,0,0.4); }
+.ctrl-btn.active { background: rgba(255,215,0,0.2); border-color: #ffd700; color: #ffd700; box-shadow: 0 0 10px rgba(255,215,0,0.2); }
+#log-counter { font-size: 9px; color: #81c784; opacity: 0.7; padding: 4px 6px; white-space: nowrap; display: inline-flex; align-items: center; }
+
+/* ── WAITING INDICATOR ── */
+#waiting-indicator { position: absolute; top: 50%; left: 50%; transform: translate(-50%,-50%); background: rgba(10,8,5,0.85); padding: 12px 24px; border-radius: 14px; color: #ffd700; font-size: 14px; font-weight: 700; z-index: 25; backdrop-filter: blur(10px); border: 1px solid rgba(255,215,0,0.3); display: none; text-shadow: 0 1px 3px rgba(0,0,0,0.5); }
+#waiting-indicator.show { display: block; }
+
+/* ── HAND RESULT ── */
+#hand-result { display: none; position: absolute; top: 50%; left: 50%; transform: translate(-50%,-50%); background: rgba(10,8,5,0.9); border: 1px solid rgba(255,215,0,0.3); border-radius: 16px; padding: 22px 30px; z-index: 50; min-width: 300px; text-align: center; backdrop-filter: blur(16px); box-shadow: 0 8px 40px rgba(0,0,0,0.6), inset 0 1px 0 rgba(255,255,255,0.05); }
+#hand-result.show { display: block; }
+#hand-result h2 { color: #ffd700; margin-bottom: 10px; font-size: 16px; text-shadow: 0 0 10px rgba(255,215,0,0.3); }
+#hand-result .result-grid { display: grid; grid-template-columns: auto auto; gap: 3px 14px; font-size: 12px; margin: 10px 0; text-align: left; }
+.result-label { opacity: 0.7; }
+#hand-result .result-action { margin-top: 14px; }
+#hand-result .result-action button { padding: 8px 26px; border: none; border-radius: 12px; background: linear-gradient(135deg, #ffc107, #f9a825, #f57f17); color: #000; font-size: 13px; font-weight: 700; cursor: pointer; box-shadow: 0 3px 12px rgba(249,168,37,0.3), inset 0 1px 0 rgba(255,255,255,0.3); }
+#hand-result .result-action button:hover { transform: scale(1.05); }
+
+#game-over { display: none; position: absolute; inset: 0; background: rgba(0,0,0,0.85); z-index: 100; justify-content: center; align-items: center; flex-direction: column; gap: 20px; backdrop-filter: blur(6px); }
+#game-over.show { display: flex; }
+#game-over h1 { font-size: 36px; color: #ffd700; text-shadow: 0 0 20px rgba(255,215,0,0.4); }
+#game-over p { font-size: 18px; opacity: 0.8; }
+#game-over button { padding: 12px 36px; border: none; border-radius: 14px; background: linear-gradient(135deg, #ffc107, #f9a825, #f57f17); color: #000; font-size: 16px; font-weight: 700; cursor: pointer; box-shadow: 0 4px 16px rgba(249,168,37,0.3), inset 0 1px 0 rgba(255,255,255,0.3); }
+
+@keyframes dealCard { from { opacity: 0; transform: scale(0.5) rotate(10deg); } to { opacity: 1; transform: scale(1) rotate(0); } }
+.card.dealing { animation: dealCard 0.3s ease forwards; }
+
+/* ── LOBBY OVERLAY ── */
+#lobby-overlay {
+  position: absolute; inset: 0; z-index: 200;
+  background: rgba(0,0,0,0.92);
+  display: flex; justify-content: center; align-items: center;
+  backdrop-filter: blur(8px);
+}
+#lobby-overlay.hidden { display: none; }
+#lobby-box {
+  background: rgba(20,18,14,0.95); border: 1px solid rgba(255,215,0,0.3);
+  border-radius: 20px; padding: 30px 40px; min-width: 360px;
+  text-align: center; box-shadow: 0 8px 40px rgba(0,0,0,0.6);
+}
+#lobby-box h1 { color: #ffd700; font-size: 28px; margin-bottom: 6px; }
+#lobby-box h2 { color: #e0e0e0; font-size: 14px; opacity: 0.6; margin-bottom: 20px; font-weight: 400; }
+#name-input { background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.2); border-radius: 10px; padding: 10px 16px; color: #fff; font-size: 15px; width: 100%; text-align: center; outline: none; margin-bottom: 12px; }
+#name-input:focus { border-color: #ffd700; }
+#join-btn { padding: 10px 30px; border: none; border-radius: 12px; background: linear-gradient(135deg, #ffc107, #f9a825, #f57f17); color: #000; font-size: 15px; font-weight: 700; cursor: pointer; margin-bottom: 20px; }
+#join-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+#player-list { text-align: left; margin: 10px 0; }
+.lobby-player { padding: 6px 10px; margin: 4px 0; border-radius: 8px; background: rgba(255,255,255,0.05); font-size: 13px; font-weight: 600; display: flex; justify-content: space-between; }
+.lobby-player .team-badge { font-size: 11px; padding: 2px 8px; border-radius: 6px; font-weight: 700; }
+.lobby-player .team-badge.team0 { background: rgba(100,181,246,0.3); color: #6ec6ff; }
+.lobby-player .team-badge.team1 { background: rgba(239,83,80,0.3); color: #ff6b6b; }
+.lobby-player.empty { opacity: 0.3; font-style: italic; }
+.lobby-player.disconnected { opacity: 0.5; }
+#host-controls { margin-top: 16px; display: flex; flex-direction: column; gap: 8px; }
+#host-controls button { padding: 8px 16px; border: none; border-radius: 10px; font-size: 13px; font-weight: 700; cursor: pointer; }
+#randomize-teams-btn { background: rgba(100,181,246,0.3); color: #6ec6ff; border: 1px solid rgba(100,181,246,0.4); }
+#randomize-dealer-btn { background: rgba(255,215,0,0.2); color: #ffd700; border: 1px solid rgba(255,215,0,0.3); }
+#start-game-btn { background: linear-gradient(135deg, #66bb6a, #43a047); color: #fff; font-size: 15px; padding: 10px 20px; }
+#start-game-btn:disabled { opacity: 0.3; cursor: not-allowed; }
+#dealer-display { color: #ffd700; font-size: 12px; margin-top: 4px; opacity: 0.7; }
+#connection-status { font-size: 11px; margin-top: 8px; opacity: 0.5; }
+</style>
+</head>
+<body>
+<div id="table">
+  <div id="trump-indicator" class="hidden"><div class="trump-row"><span class="trump-label">Trump</span><span class="trump-icon" id="trump-suit"></span></div><div class="bidder-info" id="bidder-info"></div></div>
+  <div id="scoreboard">
+    <div class="score-team"><span class="score-label team0-color" id="team0-label">Team A</span><span class="score-val team0-color" id="score0">0</span></div>
+    <div id="game-info"><span id="hand-num">—</span></div>
+    <div class="score-team"><span class="score-val team1-color" id="score1">0</span><span class="score-label team1-color" id="team1-label">Team B</span></div>
+  </div>
+  <div id="top-controls">
+    <button class="ctrl-btn" id="new-game-btn" onclick="sendNewGame()" style="display:none">New Game</button>
+    <span id="log-counter">0 logged</span>
+    <button class="ctrl-btn" onclick="GameLog.exportJSON()">Export Log</button>
+    <button class="ctrl-btn" onclick="if(confirm('Clear all logged data?'))GameLog.clear()">Clear Log</button>
+  </div>
+  <div class="player-area south" id="pa-south">
+    <div class="hand south" id="hand-south"></div>
+    <div class="player-label" id="label-south">You</div>
+  </div>
+  <div class="player-area north" id="pa-north">
+    <div class="player-label" id="label-north">Partner</div>
+    <div id="hand-north" class="opp-hand opp-hand-closed"></div>
+  </div>
+  <div class="player-area west" id="pa-west">
+    <div class="player-label" id="label-west">West</div>
+    <div id="hand-west" class="opp-hand opp-hand-closed"></div>
+  </div>
+  <div class="player-area east" id="pa-east">
+    <div class="player-label" id="label-east">East</div>
+    <div id="hand-east" class="opp-hand opp-hand-closed"></div>
+  </div>
+  <div id="trick-area"></div>
+  <div id="waiting-indicator"></div>
+  <div id="bid-panel"><div id="bid-prompt">Your bid:</div><div id="bid-buttons"></div></div>
+  <div id="hand-result"><h2 id="result-title"></h2><div class="result-grid" id="result-grid"></div><div id="result-score-line"></div><div class="result-action"><button id="next-hand-btn" onclick="sendNextHand()">Next Hand</button></div></div>
+  <div id="game-over"><h1 id="go-title"></h1><p id="go-detail"></p><button onclick="sendNewGame()">New Game</button></div>
+  <div id="log-panel"></div>
+</div>
+
+<div id="lobby-overlay">
+  <div id="lobby-box">
+    <h1>Pitch</h1>
+    <h2>Hi-Lo-Jack Multiplayer</h2>
+    <input type="text" id="name-input" placeholder="Enter your name" maxlength="20" autocomplete="off">
+    <br>
+    <button id="join-btn" onclick="joinGame()">Join Game</button>
+    <div id="player-list"></div>
+    <div id="dealer-display"></div>
+    <div id="host-controls" style="display:none">
+      <button id="randomize-teams-btn" onclick="send({type:'randomize-teams'})">Randomize Teams</button>
+      <button id="randomize-dealer-btn" onclick="send({type:'randomize-dealer'})">Randomize Dealer</button>
+      <button id="start-game-btn" disabled onclick="send({type:'start-game'})">Start Game (need 4 players)</button>
+    </div>
+    <div id="connection-status">Connecting...</div>
+  </div>
+</div>
+
+<script>
+// ══════════════════════════════════════════
+// GAME ENGINE (shared constants)
+// ══════════════════════════════════════════
+const SUIT_NAMES=['Clubs','Diamonds','Hearts','Spades'];
+const SUIT_SYMBOLS=['♣','♦','♥','♠'];
+const RANK_NAMES={2:'2',3:'3',4:'4',5:'5',6:'6',7:'7',8:'8',9:'9',10:'10',11:'J',12:'Q',13:'K',14:'A'};
+const GAME_POINTS={14:4,13:3,12:2,11:1,10:10};
+
+class Card {
+  constructor(r,s){this.rank=r;this.suit=s}
+  get gamePoints(){return GAME_POINTS[this.rank]||0}
+  get id(){return this.suit*100+this.rank}
+  get name(){return(RANK_NAMES[this.rank]||this.rank)+SUIT_SYMBOLS[this.suit]}
+  get isRed(){return this.suit===1||this.suit===2}
+  eq(o){return o&&this.rank===o.rank&&this.suit===o.suit}
+}
+function teamOf(p){return p%2}
+
+// Rebuild Card objects from plain JSON
+function toCard(o){ return new Card(o.rank, o.suit); }
+
+// ══════════════════════════════════════════
+// MULTIPLAYER STATE
+// ══════════════════════════════════════════
+let ws = null;
+let mySeat = -1;
+let myName = '';
+let isHost = false;
+let playerNames = ['','','',''];
+let teams = [0,1,0,1];
+let dealer = 0;
+let myHand = [];
+let oppCounts = {0:0,1:0,2:0,3:0};
+let trump = null;
+let bidder = null;
+let bidAmount = 0;
+let scores = {0:0, 1:0};
+let handNum = 0;
+let currentTrick = [];
+let tricks = [];
+
+// Perspective: map absolute seat → visual position
+// We always see ourselves at south
+const VIEW_ORDER = ['south','west','north','east'];
+function viewPos(absSeat) {
+  const offset = (absSeat - mySeat + 4) % 4;
+  return VIEW_ORDER[offset];
+}
+function viewLabel(pos) {
+  return {south:'hand-south', west:'hand-west', north:'hand-north', east:'hand-east'}[pos];
+}
+function labelId(pos) {
+  return {south:'label-south', west:'label-west', north:'label-north', east:'label-east'}[pos];
+}
+
+// ══════════════════════════════════════════
+// WEBSOCKET CONNECTION
+// ══════════════════════════════════════════
+function connect() {
+  const proto = location.protocol === 'https:' ? 'wss:' : 'ws:';
+  const status = document.getElementById('connection-status');
+  status.textContent = 'Connecting...';
+  ws = new WebSocket(`${proto}//${location.host}`);
+  ws.onopen = () => {
+    status.textContent = 'Connected';
+    status.style.color = '#81c784';
+    // If we had a name and were previously connected, auto-rejoin
+    if (myName) send({ type: 'join', name: myName });
+  };
+  ws.onclose = () => {
+    status.textContent = 'Disconnected — reconnecting in 3s...';
+    status.style.color = '#ef5350';
+    setTimeout(() => connect(), 3000);
+  };
+  ws.onerror = () => {};
+  ws.onmessage = (evt) => { handleMessage(JSON.parse(evt.data)); };
+}
+
+function send(msg) { if (ws && ws.readyState === 1) ws.send(JSON.stringify(msg)); }
+
+function joinGame() {
+  const name = document.getElementById('name-input').value.trim();
+  if (!name) return;
+  myName = name;
+  send({ type: 'join', name });
+  document.getElementById('join-btn').disabled = true;
+}
+
+// Enter key to join
+document.getElementById('name-input').addEventListener('keydown', (e) => { if (e.key === 'Enter') joinGame(); });
+
+// ══════════════════════════════════════════
+// MESSAGE HANDLER
+// ══════════════════════════════════════════
+function handleMessage(msg) {
+  switch(msg.type) {
+    case 'joined':
+      mySeat = msg.seat;
+      myName = msg.name;
+      break;
+
+    case 'lobby':
+      isHost = (mySeat === msg.hostSeat);
+      teams = msg.teams || [0,1,0,1];
+      dealer = msg.dealer || 0;
+      updateLobby(msg.players);
+      break;
+
+    case 'error':
+      alert(msg.message);
+      break;
+
+    case 'hand-dealt':
+      document.getElementById('lobby-overlay').classList.add('hidden');
+      myHand = msg.hand.map(toCard).sort((a,b) => a.suit-b.suit || a.rank-b.rank);
+      dealer = msg.dealer;
+      handNum = msg.handNum;
+      scores = msg.scores;
+      teams = msg.teams;
+      trump = null; bidder = null; bidAmount = 0;
+      tricks = []; currentTrick = [];
+      oppCounts = {0:6,1:6,2:6,3:6};
+      // Store player names
+      if (msg.players) msg.players.forEach((p,i) => { if (p) playerNames[i] = p.name; });
+      document.getElementById('hand-result').classList.remove('show');
+      document.getElementById('game-over').classList.remove('show');
+      document.getElementById('trump-indicator').classList.add('hidden');
+      clearTrickArea(); clearBidBubbles();
+      updateScoreboard(); updateLabels(); renderMyHand(); renderAllOpp();
+      document.getElementById('hand-num').textContent = `Hand ${handNum}`;
+      log(`Hand ${handNum} — Dealer: ${playerNames[dealer]}`);
+      if (isHost) document.getElementById('new-game-btn').style.display = '';
+      // Start GameLog
+      const fakeHands = [myHand, [], [], []]; // only log our own hand
+      GameLog.startHand(dealer, fakeHands, scores);
+      break;
+
+    case 'bid-turn':
+      setActiveTurn(msg.seat);
+      if (msg.seat !== mySeat) showWaiting(`Waiting for ${msg.playerName} to bid...`);
+      break;
+
+    case 'your-bid':
+      hideWaiting();
+      showBidPanel(msg.legalBids, msg.currentBid);
+      break;
+
+    case 'bid-placed':
+      showBidBubble(msg.seat, msg.bid === 0 ? 'Pass' : `Bid ${msg.bid}`);
+      log(`${msg.playerName}: ${msg.bid === 0 ? 'Pass' : 'Bid ' + msg.bid}`);
+      break;
+
+    case 'bid-won':
+      bidder = msg.bidder;
+      bidAmount = msg.bidAmount;
+      log(`${msg.bidderName} wins bid at ${bidAmount}`, 'highlight');
+      setActiveTurn(null);
+      setTimeout(() => clearBidBubbles(), 500);
+      break;
+
+    case 'trump-set':
+      trump = msg.trump;
+      showTrump(trump);
+      if (msg.pitcherName) log(`${msg.pitcherName} pitches — Trump: ${SUIT_SYMBOLS[trump]} ${SUIT_NAMES[trump]}`, 'highlight');
+      break;
+
+    case 'play-turn':
+      currentTrick = (msg.currentTrick || []).map(x => ({player: x.player, card: toCard(x.card)}));
+      setActiveTurn(msg.seat);
+      if (msg.seat !== mySeat) showWaiting(`Waiting for ${msg.playerName}...`);
+      break;
+
+    case 'your-turn':
+      hideWaiting();
+      const legal = msg.legalPlays.map(toCard);
+      renderMyHand(legal);
+      break;
+
+    case 'card-played': {
+      const card = toCard(msg.card);
+      addCardToTrick(msg.seat, card);
+      if (msg.seat !== mySeat) {
+        oppCounts[msg.seat] = msg.cardsLeft;
+        renderOppHand(msg.seat);
+      }
+      break;
+    }
+
+    case 'hand-update':
+      myHand = msg.hand.map(toCard).sort((a,b) => a.suit-b.suit || a.rank-b.rank);
+      renderMyHand();
+      break;
+
+    case 'trick-state':
+      // Reconnect: rebuild current trick display
+      currentTrick = (msg.currentTrick || []).map(x => ({player: x.player, card: toCard(x.card)}));
+      clearTrickArea();
+      for (const tc of currentTrick) addCardToTrick(tc.player, tc.card);
+      break;
+
+    case 'trick-complete': {
+      const winner = msg.winner;
+      highlightTrickWinner(winner);
+      const tGP = msg.cards.reduce((s,tc) => s + (GAME_POINTS[tc.card.rank]||0), 0);
+      log(`Trick ${msg.trickNum+1}: ${msg.winnerName} wins${tGP>0?' ('+tGP+' GP)':''}`);
+      tricks.push({cards: msg.cards.map(x => ({player:x.player, card:toCard(x.card)}))});
+      setActiveTurn(null);
+      hideWaiting();
+      setTimeout(() => { flyCardsToWinner(winner); setTimeout(() => clearTrickArea(), 600); }, 600);
+      break;
+    }
+
+    case 'hand-result':
+      hideWaiting();
+      showHandResult(msg);
+      break;
+
+    case 'player-disconnected':
+      log(`${msg.name} disconnected`, 'highlight');
+      showWaiting(`${msg.name} disconnected — waiting for reconnect...`);
+      break;
+  }
+}
+
+// ══════════════════════════════════════════
+// LOBBY UI
+// ══════════════════════════════════════════
+function updateLobby(players) {
+  const list = document.getElementById('player-list');
+  const teamNames = ['Team A','Team B'];
+  let html = '';
+  let count = 0;
+  for (let i = 0; i < 4; i++) {
+    const p = players && players[i];
+    if (p && p.name) {
+      const t = teams[i];
+      const disc = p.connected === false ? ' disconnected' : '';
+      html += `<div class="lobby-player${disc}"><span>Seat ${i+1}: ${p.name}${p.connected===false?' (offline)':''}</span><span class="team-badge team${t}">${teamNames[t]}</span></div>`;
+      if (p.connected !== false) count++;
+    } else {
+      html += `<div class="lobby-player empty">Seat ${i+1}: waiting...</div>`;
+    }
+  }
+  list.innerHTML = html;
+  document.getElementById('dealer-display').textContent = `First dealer: Seat ${dealer+1}${players && players[dealer] ? ' ('+players[dealer].name+')' : ''}`;
+
+  if (isHost) {
+    document.getElementById('host-controls').style.display = '';
+    const btn = document.getElementById('start-game-btn');
+    btn.disabled = count < 4;
+    btn.textContent = count < 4 ? `Start Game (need ${4-count} more)` : 'Start Game';
+  }
+}
+
+// ══════════════════════════════════════════
+// RENDERING
+// ══════════════════════════════════════════
+function renderCard(card, faceUp, small, playable, onClick) {
+  const el = document.createElement('div');
+  el.className = `card ${faceUp?'card-front':'card-back'} ${small?'small':''} ${playable?'playable':''} ${faceUp?(card.isRed?'red':'black'):''} dealing`;
+  if (faceUp) {
+    const r = RANK_NAMES[card.rank]||card.rank;
+    const s = SUIT_SYMBOLS[card.suit];
+    el.innerHTML = `<div class="card-tl"><span class="card-rank">${r}</span><span class="card-suit-sm">${s}</span></div><div class="card-center">${s}</div><div class="card-br"><span class="card-rank">${r}</span><span class="card-suit-sm">${s}</span></div>`;
+    el.setAttribute('data-card-id', card.id);
+  }
+  if (onClick) el.addEventListener('click', onClick);
+  return el;
+}
+
+function renderMyHand(legalCards) {
+  const ps = legalCards ? new Set(legalCards.map(c => c.id)) : new Set();
+  const s = document.getElementById('hand-south');
+  const currentIds = new Set(myHand.map(c => c.id));
+  // Remove cards no longer in hand
+  s.querySelectorAll('[data-card-id]').forEach(el => {
+    if (!currentIds.has(+el.getAttribute('data-card-id'))) el.remove();
+  });
+  const renderedIds = new Set();
+  s.querySelectorAll('[data-card-id]').forEach(el => renderedIds.add(+el.getAttribute('data-card-id')));
+  myHand.forEach(c => {
+    const p = ps.has(c.id);
+    if (renderedIds.has(c.id)) {
+      const el = s.querySelector(`[data-card-id="${c.id}"]`);
+      if (el) { el.classList.toggle('playable', p); el.onclick = p ? () => playCard(c) : null; el.style.cursor = p ? 'pointer' : 'default'; }
+    } else {
+      const el = renderCard(c, true, false, p, p ? () => playCard(c) : null);
+      el.setAttribute('data-card-id', c.id);
+      s.appendChild(el);
+    }
+  });
+}
+
+function renderOppHand(absSeat) {
+  const pos = viewPos(absSeat);
+  const containerId = viewLabel(pos);
+  const el = document.getElementById(containerId);
+  if (!el) return;
+  const count = oppCounts[absSeat] || 0;
+  const isEW = (pos === 'west' || pos === 'east');
+  el.classList.remove('opp-hand-open');
+  el.classList.add('opp-hand-closed');
+  el.querySelectorAll('[data-card-id]').forEach(ce => ce.remove());
+  if (count <= 0) { el.innerHTML = ''; return; }
+  let back = el.querySelector('.card-back');
+  if (back) { const cnt = back.querySelector('.card-count'); if (cnt) cnt.textContent = count; }
+  else { back = document.createElement('div'); back.className = 'card card-back opp-card'; if (isEW) back.classList.add('rotated-card'); back.innerHTML = `<div class="card-count">${count}</div>`; el.appendChild(back); }
+}
+
+function renderAllOpp() {
+  for (let s = 0; s < 4; s++) { if (s !== mySeat) renderOppHand(s); }
+}
+
+function updateLabels() {
+  for (let s = 0; s < 4; s++) {
+    const pos = viewPos(s);
+    const el = document.getElementById(labelId(pos));
+    let html = s === mySeat ? myName : (playerNames[s] || `Seat ${s+1}`);
+    if (s === dealer) html += ` <span class="dealer-chip">D</span>`;
+    el.innerHTML = html;
+  }
+  // Update scoreboard team labels
+  const myTeam = teams[mySeat];
+  const myTeamNames = []; const oppTeamNames = [];
+  for (let s = 0; s < 4; s++) {
+    const name = s === mySeat ? myName : (playerNames[s] || `Seat ${s+1}`);
+    if (teams[s] === myTeam) myTeamNames.push(name); else oppTeamNames.push(name);
+  }
+  document.getElementById('team0-label').textContent = myTeamNames.join(' & ');
+  document.getElementById('team1-label').textContent = oppTeamNames.join(' & ');
+  // Map team colors: team0-color = our team, team1-color = their team
+}
+
+function setActiveTurn(absSeat) {
+  document.querySelectorAll('.player-label').forEach(el => el.classList.remove('active-turn'));
+  if (absSeat !== null && absSeat >= 0) {
+    const pos = viewPos(absSeat);
+    document.getElementById(labelId(pos)).classList.add('active-turn');
+  }
+}
+
+function updateScoreboard() {
+  // Our team = teams[mySeat], score displayed as score0
+  const myTeam = teams[mySeat] || 0;
+  document.getElementById('score0').textContent = scores[myTeam] || 0;
+  document.getElementById('score1').textContent = scores[1-myTeam] || 0;
+}
+
+function showTrump(s) {
+  document.getElementById('trump-indicator').classList.remove('hidden');
+  const icon = document.getElementById('trump-suit');
+  icon.textContent = SUIT_SYMBOLS[s];
+  icon.style.color = (s===1||s===2) ? '#ef5350' : '#e0e0e0';
+  const info = document.getElementById('bidder-info');
+  if (bidder !== null && bidAmount) info.textContent = `${playerNames[bidder]} bid ${bidAmount}`;
+}
+
+function clearTrickArea() { document.getElementById('trick-area').innerHTML = ''; }
+
+function addCardToTrick(absSeat, card) {
+  const pos = viewPos(absSeat);
+  const area = document.getElementById('trick-area');
+  const el = document.createElement('div');
+  el.className = `trick-card pos-${pos} card-enter-${pos}`;
+  el.appendChild(renderCard(card, true, false, false));
+  el.innerHTML += '<div class="winner-glow"></div>';
+  area.appendChild(el);
+  requestAnimationFrame(() => requestAnimationFrame(() => { el.classList.remove(`card-enter-${pos}`); }));
+}
+
+function highlightTrickWinner(absSeat) {
+  const pos = viewPos(absSeat);
+  const el = document.getElementById('trick-area').querySelector(`.pos-${pos} .winner-glow`);
+  if (el) el.style.display = 'block';
+}
+
+function flyCardsToWinner(absSeat) {
+  const pos = viewPos(absSeat);
+  document.querySelectorAll('#trick-area .trick-card').forEach(el => { el.classList.add(`fly-to-${pos}`); });
+}
+
+function showBidBubble(absSeat, text) {
+  clearBidBubble(absSeat);
+  const pos = viewPos(absSeat);
+  const b = document.createElement('div');
+  b.className = `bid-bubble ${pos}`;
+  b.id = `bid-bubble-${absSeat}`;
+  b.textContent = text;
+  document.getElementById('table').appendChild(b);
+}
+function clearBidBubble(absSeat) { const el = document.getElementById(`bid-bubble-${absSeat}`); if (el) el.remove(); }
+function clearBidBubbles() { document.querySelectorAll('.bid-bubble').forEach(el => el.remove()); }
+
+function showWaiting(text) { const el = document.getElementById('waiting-indicator'); el.textContent = text; el.classList.add('show'); }
+function hideWaiting() { document.getElementById('waiting-indicator').classList.remove('show'); }
+
+// ══════════════════════════════════════════
+// ACTIONS
+// ══════════════════════════════════════════
+function showBidPanel(legalBids, currentBid) {
+  const panel = document.getElementById('bid-panel');
+  const btns = document.getElementById('bid-buttons');
+  btns.innerHTML = '';
+  if (legalBids.includes(0)) {
+    const b = document.createElement('button'); b.className = 'bid-btn pass'; b.textContent = 'Pass';
+    b.onclick = () => { panel.classList.remove('show'); send({type:'bid', bid:0}); }; btns.appendChild(b);
+  }
+  for (const v of legalBids) {
+    if (v === 0) continue;
+    const b = document.createElement('button'); b.className = 'bid-btn bid-val';
+    b.textContent = (currentBid > 0 && v === currentBid) ? `Steal ${v}` : v;
+    b.onclick = () => { panel.classList.remove('show'); send({type:'bid', bid:v}); }; btns.appendChild(b);
+  }
+  panel.classList.add('show');
+}
+
+function playCard(card) {
+  send({ type: 'play', card: { rank: card.rank, suit: card.suit } });
+  renderMyHand(); // remove playable highlights
+}
+
+function sendNextHand() {
+  document.getElementById('hand-result').classList.remove('show');
+  send({ type: 'next-hand' });
+}
+
+function sendNewGame() {
+  document.getElementById('game-over').classList.remove('show');
+  send({ type: 'new-game' });
+}
+
+function showHandResult(msg) {
+  const s = msg.scoring;
+  const myTeam = teams[mySeat];
+  const bidTeam = teamOf(msg.bidder);
+  const made = msg.made;
+  scores = msg.scores;
+  updateScoreboard();
+
+  const el = document.getElementById('hand-result');
+  const bidderName = playerNames[msg.bidder] || `Seat ${msg.bidder+1}`;
+  document.getElementById('result-title').textContent = `${bidderName} bid ${msg.bidAmount} — ${made?'MADE ✓':'SET ✗'}`;
+  document.getElementById('result-title').style.color = made ? '#81c784' : '#ef5350';
+
+  const grid = document.getElementById('result-grid');
+  grid.innerHTML = '';
+  const teamLabel = (t) => t === myTeam ? 'Us' : 'Them';
+  const items = [
+    ['High', s.highTeam!==null ? (RANK_NAMES[s.high.rank]+SUIT_SYMBOLS[s.high.suit]+' → '+teamLabel(s.highTeam)) : '—'],
+    ['Low', s.lowTeam!==null ? (RANK_NAMES[s.low.rank]+SUIT_SYMBOLS[s.low.suit]+' → '+teamLabel(s.lowTeam)) : '—'],
+    ['Jack', s.jackCaptured ? ('→ '+teamLabel(s.jackTeam)) : 'Not in play'],
+    ['Game', s.gameTeam!==null ? (`${s.gp[0]}-${s.gp[1]} → `+teamLabel(s.gameTeam)) : `Tied ${s.gp[0]}-${s.gp[1]}`]
+  ];
+  items.forEach(([l,v]) => { grid.innerHTML += `<span class="result-label">${l}</span><span>${v}</span>`; });
+  document.getElementById('result-score-line').innerHTML = `<div style="margin-top:8px;font-size:13px;">Score: <span class="team0-color">${scores[myTeam]||0}</span> | <span class="team1-color">${scores[1-myTeam]||0}</span></div>`;
+  log(`${made?'MADE':'SET'} — Score: ${scores[myTeam]||0}-${scores[1-myTeam]||0}`, 'score-change');
+
+  // Only host sees Next Hand button
+  document.getElementById('next-hand-btn').style.display = isHost ? '' : 'none';
+  el.classList.add('show');
+
+  // GameLog finish
+  GameLog.finishHand({points: s.points, tricksWon: s.tricksWon, jackCaptured: s.jackCaptured, jackTeam: s.jackTeam, lowTeam: s.lowTeam}, msg.bidder, msg.bidAmount, trump);
+
+  if (msg.winner !== null) {
+    setTimeout(() => {
+      el.classList.remove('show');
+      const weWon = msg.winner === myTeam;
+      document.getElementById('go-title').textContent = weWon ? 'Your Team Wins!' : 'Opponents Win!';
+      document.getElementById('go-detail').textContent = `Final Score: ${scores[myTeam]||0} - ${scores[1-myTeam]||0}`;
+      document.getElementById('game-over').classList.add('show');
+    }, 2000);
+  }
+}
+
+function log(msg, cls) {
+  const el = document.getElementById('log-panel');
+  const e = document.createElement('div'); e.className = `log-entry ${cls||''}`; e.textContent = msg;
+  el.appendChild(e); el.scrollTop = el.scrollHeight;
+}
+
+// ══════════════════════════════════════════
+// GAME LOGGER (local per-player)
+// ══════════════════════════════════════════
+const GameLog = {
+  games: [], currentHand: null, totalDecisions: 0,
+  startHand(dealer, hands, scores) {
+    this.currentHand = { dealer, bidder:null, bid_level:null, trump_suit:null,
+      team_scores:[scores[0],scores[1]], initial_hands: hands.map(h=>h.map(c=>[c.rank,c.suit])), decisions:[], bids:[], outcome:null };
+  },
+  finishHand(scoring, bidder, bidAmount, trump) {
+    if (!this.currentHand) return;
+    if (this.currentHand.decisions.length===0 && (!this.currentHand.bids || this.currentHand.bids.length===0)) { this.currentHand=null; return; }
+    const bt = teamOf(bidder);
+    this.currentHand.bidder = bidder; this.currentHand.bid_level = bidAmount; this.currentHand.trump_suit = trump;
+    this.currentHand.outcome = { bidder_pts: scoring.points[bt], jack_captured: scoring.jackCaptured && scoring.jackTeam===bt, low_captured: scoring.lowTeam!==null && scoring.lowTeam===bt };
+    this.games.push(this.currentHand); this.currentHand = null; this._updateCounter();
+  },
+  exportJSON() {
+    if (this.totalDecisions===0 && this.games.length===0) { alert('No data logged yet.'); return; }
+    const data = { version:'7.6-mp', exported_at: new Date().toISOString(), hands_played: this.games.length, total_decisions: this.totalDecisions, games: this.games };
+    const json = JSON.stringify(data);
+    const blob = new Blob([json], {type:'application/json;charset=utf-8'});
+    const fname = `mp_gameplay_${Date.now()}.json`;
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a'); a.href = url; a.download = fname; a.type = 'application/json';
+    document.body.appendChild(a); a.click(); document.body.removeChild(a); URL.revokeObjectURL(url);
+  },
+  clear() { this.games=[]; this.totalDecisions=0; this.currentHand=null; this._updateCounter(); },
+  _updateCounter() { const el = document.getElementById('log-counter'); if (el) el.textContent = `${this.games.length} hands`; }
+};
+
+// ══════════════════════════════════════════
+// INIT
+// ══════════════════════════════════════════
+connect();
+document.getElementById('name-input').focus();
+</script>
+</body></html>
