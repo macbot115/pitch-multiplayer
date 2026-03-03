@@ -144,6 +144,7 @@ function broadcastLobby() {
     players: room.players.map((p, i) => p ? { name: p.name, seat: i, connected: p.connected, team: room.teams[i] } : null),
     hostSeat: room.hostSeat,
     dealer: room.dealer,
+    teams: room.teams,
   });
 }
 
@@ -407,6 +408,8 @@ function newGame() {
 // ══════════════════════════════════════════
 wss.on('connection', (ws) => {
   let mySeat = -1;
+  ws.isAlive = true;
+  ws.on('pong', () => { ws.isAlive = true; });
   console.log('  → New WebSocket connection');
 
   ws.on('message', (raw) => {
@@ -418,15 +421,33 @@ wss.on('connection', (ws) => {
         const joinName = msg.name.trim();
         // 1. Try exact name match (disconnected)
         let seat = room.players.findIndex(p => p && p.name === joinName && !p.connected);
-        // 2. Try exact name match (connected but stale ws — handles race condition)
+        // 2. Try exact name match — same person reconnecting (even if server hasn't detected disconnect yet)
         if (seat === -1) {
-          seat = room.players.findIndex(p => p && p.name === joinName && p.connected && p.ws !== ws && (!p.ws || p.ws.readyState !== 1));
+          seat = room.players.findIndex(p => p && p.name === joinName && p.ws !== ws);
+          if (seat !== -1) {
+            const oldWs = room.players[seat].ws;
+            if (oldWs && oldWs.readyState === 1) {
+              console.log(`  → Closing stale ws for ${joinName} (Seat ${seat+1}) — same name reconnecting`);
+              try { oldWs.close(); } catch(e) {}
+            }
+          }
         }
         // 3. Try case-insensitive name match (disconnected)
         if (seat === -1) {
           seat = room.players.findIndex(p => p && p.name.toLowerCase() === joinName.toLowerCase() && !p.connected);
         }
-        // 4. During active game, allow claiming any disconnected seat
+        // 4. Try case-insensitive name match (connected but stale)
+        if (seat === -1) {
+          seat = room.players.findIndex(p => p && p.name.toLowerCase() === joinName.toLowerCase() && p.ws !== ws);
+          if (seat !== -1) {
+            const oldWs = room.players[seat].ws;
+            if (oldWs && oldWs.readyState === 1) {
+              console.log(`  → Closing stale ws for ${joinName} (Seat ${seat+1}) — case-insensitive match`);
+              try { oldWs.close(); } catch(e) {}
+            }
+          }
+        }
+        // 5. During active game, allow claiming any disconnected seat
         if (seat === -1 && room.phase !== 'lobby') {
           seat = room.players.findIndex(p => p && !p.connected);
           if (seat !== -1) {
@@ -434,7 +455,7 @@ wss.on('connection', (ws) => {
             room.players[seat].name = joinName;
           }
         }
-        // 5. If still no seat, look for an empty slot (lobby only makes sense)
+        // 6. If still no seat, look for an empty slot (lobby only makes sense)
         if (seat === -1) {
           seat = room.players.findIndex(p => p === null);
           if (seat === -1 && room.players.length < 4) seat = room.players.length;
@@ -567,6 +588,16 @@ wss.on('connection', (ws) => {
     console.log(`  → WebSocket error: ${err.message}`);
   });
 });
+
+// ── HEARTBEAT: detect dead connections every 10s ──
+const heartbeat = setInterval(() => {
+  wss.clients.forEach(ws => {
+    if (ws.isAlive === false) return ws.terminate();
+    ws.isAlive = false;
+    ws.ping();
+  });
+}, 10000);
+wss.on('close', () => clearInterval(heartbeat));
 
 // ══════════════════════════════════════════
 // START SERVER
