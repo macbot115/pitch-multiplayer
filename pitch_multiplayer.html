@@ -203,7 +203,8 @@ body {
 .log-entry.score-change { color: #81c784; font-weight: 700; }
 
 /* ── CONTROLS ── */
-#top-controls { position: absolute; top: 28px; right: 28px; display: flex; gap: 4px; z-index: 20; }
+#top-controls { position: absolute; top: 28px; right: 28px; display: flex; gap: 4px; z-index: 20; flex-wrap: wrap; justify-content: flex-end; }
+#lobby-controls { position: absolute; top: 28px; left: 28px; display: flex; gap: 4px; z-index: 20; flex-wrap: wrap; }
 .ctrl-btn { padding: 6px 12px; border: 1px solid rgba(255,255,255,0.2); border-radius: 8px; background: rgba(10,8,5,0.7); color: #e0e0e0; font-size: 11px; font-weight: 600; cursor: pointer; backdrop-filter: blur(8px); transition: background 0.15s, box-shadow 0.15s; white-space: nowrap; box-shadow: 0 2px 8px rgba(0,0,0,0.3); }
 .ctrl-btn:hover { background: rgba(255,255,255,0.12); box-shadow: 0 3px 12px rgba(0,0,0,0.4); }
 .ctrl-btn.active { background: rgba(255,215,0,0.2); border-color: #ffd700; color: #ffd700; box-shadow: 0 0 10px rgba(255,215,0,0.2); }
@@ -272,6 +273,108 @@ body {
   text-shadow: 0 2px 6px rgba(0,0,0,0.7);
 }
 #lobby-status.hidden { display: none; }
+
+/* ══════════════════════════════════════════
+   MOBILE RESPONSIVE
+   ══════════════════════════════════════════ */
+@media (max-width: 768px) {
+  #table::before { inset: 10px; border-radius: 20px; }
+  #table::after  { inset: 10px; border-radius: 20px; }
+
+  /* Scoreboard */
+  #scoreboard { top: 12px; padding: 5px 14px; gap: 12px; border-radius: 14px; }
+  .score-label { font-size: 9px; letter-spacing: 0.5px; }
+  .score-val { font-size: 14px; min-width: 18px; }
+  #game-info { font-size: 8px; }
+
+  /* Trump indicator */
+  #trump-indicator { top: 12px; left: 12px; padding: 6px 10px; border-radius: 10px; font-size: 12px; }
+  #trump-indicator .trump-icon { font-size: 22px; }
+  #trump-indicator .trump-label { font-size: 10px; }
+  #trump-indicator .bidder-info { font-size: 10px; }
+
+  /* Controls */
+  #top-controls { top: 12px; right: 12px; gap: 3px; }
+  #lobby-controls { top: 12px; left: 12px; gap: 3px; }
+  .ctrl-btn { padding: 4px 8px; font-size: 9px; border-radius: 6px; }
+  #log-counter { font-size: 8px; padding: 2px 4px; }
+
+  /* Player areas */
+  .player-area.south { bottom: 10px; }
+  .player-area.north { top: 50px; }
+  .player-area.west  { left: 14px; gap: 6px; }
+  .player-area.east  { right: 14px; gap: 6px; }
+  .player-label { font-size: 10px; padding: 3px 8px; border-radius: 8px; }
+  .player-label .dealer-chip { font-size: 8px; padding: 1px 5px; border-radius: 5px; margin-left: 3px; }
+
+  /* Cards — smaller on mobile */
+  .card { width: 58px; height: 84px; border-radius: 7px; font-size: 14px; }
+  .card-front .card-tl .card-rank { font-size: 12px; }
+  .card-front .card-tl .card-suit-sm { font-size: 10px; }
+  .card-front .card-br .card-rank { font-size: 12px; }
+  .card-front .card-br .card-suit-sm { font-size: 10px; }
+  .card-front .card-center { font-size: 24px; }
+  .card.opp-card { width: 42px; height: 60px; }
+  .hand.south { gap: 1px; }
+  .card.playable:hover { transform: translateY(-10px) scale(1.04); }
+
+  /* Trick area */
+  #trick-area { width: 200px; height: 180px; }
+
+  /* Bid panel */
+  #bid-panel { bottom: 120px; }
+  #bid-prompt { font-size: 12px; }
+  .bid-btn { padding: 8px 14px; font-size: 12px; min-width: 40px; border-radius: 10px; }
+
+  /* Bid bubbles */
+  .bid-bubble { font-size: 10px; padding: 3px 10px; }
+  .bid-bubble.south { bottom: 110px; }
+  .bid-bubble.north { top: 140px; }
+  .bid-bubble.west  { left: 110px; }
+  .bid-bubble.east  { right: 110px; }
+
+  /* Waiting indicator */
+  #waiting-indicator { font-size: 12px; padding: 10px 18px; }
+
+  /* Hand result */
+  #hand-result { padding: 16px 20px; min-width: 260px; }
+  #hand-result h2 { font-size: 14px; }
+  #hand-result .result-grid { font-size: 11px; }
+
+  /* Game over */
+  #game-over h1 { font-size: 24px; }
+  #game-over p { font-size: 14px; }
+  #game-over button { padding: 10px 24px; font-size: 14px; }
+
+  /* Log panel */
+  #log-panel { bottom: 10px; right: 10px; width: 200px; max-height: 150px; padding: 6px 10px; font-size: 10px; border-radius: 10px; }
+
+  /* Join panel */
+  #join-panel { padding: 18px 24px; }
+  #join-panel h1 { font-size: 20px; }
+  #name-input { width: 180px; font-size: 14px; padding: 8px 12px; }
+  #join-btn { padding: 8px 24px; font-size: 14px; }
+
+  /* Lobby status */
+  #lobby-status { font-size: 13px; }
+  .player-label .team-dot { width: 6px; height: 6px; margin-left: 4px; }
+}
+
+/* Extra small screens (iPhone SE etc) */
+@media (max-width: 400px) {
+  .card { width: 48px; height: 70px; }
+  .card-front .card-tl .card-rank { font-size: 10px; }
+  .card-front .card-tl .card-suit-sm { font-size: 9px; }
+  .card-front .card-br .card-rank { font-size: 10px; }
+  .card-front .card-br .card-suit-sm { font-size: 9px; }
+  .card-front .card-center { font-size: 20px; }
+  .card.opp-card { width: 36px; height: 52px; }
+  .player-area.west { left: 8px; }
+  .player-area.east { right: 8px; }
+  #trick-area { width: 160px; height: 150px; }
+  .bid-btn { padding: 6px 10px; font-size: 11px; }
+  #log-panel { display: none; }
+}
 </style>
 </head>
 <body>
@@ -282,10 +385,12 @@ body {
     <div id="game-info"><span id="hand-num">—</span></div>
     <div class="score-team"><span class="score-val team1-color" id="score1">0</span><span class="score-label team1-color" id="team1-label">Team B</span></div>
   </div>
-  <div id="top-controls">
+  <div id="lobby-controls">
     <button class="ctrl-btn lobby-btn" id="randomize-teams-btn" onclick="send({type:'randomize-teams'})">Shuffle Teams</button>
     <button class="ctrl-btn lobby-btn" id="randomize-dealer-btn" onclick="send({type:'randomize-dealer'})">Shuffle Dealer</button>
     <button class="ctrl-btn lobby-btn" id="start-game-btn" disabled onclick="send({type:'start-game'})">Start Game</button>
+  </div>
+  <div id="top-controls">
     <button class="ctrl-btn" id="new-game-btn" onclick="sendNewGame()" style="display:none">New Game</button>
     <span id="log-counter">0 logged</span>
     <button class="ctrl-btn" onclick="GameLog.exportJSON()">Export Log</button>
@@ -613,9 +718,9 @@ function updateLobby(players) {
     }
   }
 
-  // Show/hide lobby control buttons for host
+  // Show lobby control buttons for all joined players
   const lobbyBtns = document.querySelectorAll('.lobby-btn');
-  if (isHost && mySeat >= 0) {
+  if (mySeat >= 0) {
     lobbyBtns.forEach(b => b.classList.add('show'));
     const startBtn = document.getElementById('start-game-btn');
     startBtn.disabled = count < 4;

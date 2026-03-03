@@ -499,21 +499,23 @@ wss.on('connection', (ws) => {
       }
 
       case 'randomize-teams': {
-        if (mySeat !== room.hostSeat) return;
+        if (room.phase !== 'lobby') return;
         room.teams = shuffle([0,1,0,1]);
+        console.log(`  → Teams randomized: [${room.teams}]`);
         broadcastLobby();
         break;
       }
 
       case 'randomize-dealer': {
-        if (mySeat !== room.hostSeat) return;
+        if (room.phase !== 'lobby') return;
         room.dealer = Math.floor(Math.random() * 4);
+        console.log(`  → Dealer randomized: Seat ${room.dealer+1}`);
         broadcastLobby();
         break;
       }
 
       case 'start-game': {
-        if (mySeat !== room.hostSeat) return;
+        if (room.phase !== 'lobby') return;
         if (playerCount() < 4) { ws.send(JSON.stringify({ type: 'error', message: 'Need 4 players' })); return; }
         startGame();
         break;
