@@ -79,16 +79,16 @@ body {
 
 #trump-indicator {
   position: absolute; top: 28px; left: 28px;
-  display: flex; flex-direction: column; align-items: flex-start; gap: 4px;
-  background: rgba(10,8,5,0.8); padding: 10px 18px; border-radius: 14px;
+  display: flex; align-items: center; gap: 6px;
+  background: none; padding: 0; border: none;
   font-weight: 700; color: #ffd700; font-size: 16px;
-  border: 1px solid rgba(255,215,0,0.3); backdrop-filter: blur(12px); z-index: 20;
-  box-shadow: 0 4px 20px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.05);
+  z-index: 20; pointer-events: none;
+  text-shadow: 0 2px 8px rgba(0,0,0,0.7), 0 0 20px rgba(0,0,0,0.4);
 }
-#trump-indicator .trump-row { display: flex; align-items: center; gap: 8px; }
-#trump-indicator .trump-label { font-size: 13px; opacity: 0.7; text-transform: uppercase; letter-spacing: 1.5px; font-weight: 600; }
-#trump-indicator .trump-icon { font-size: 32px; filter: drop-shadow(0 0 6px rgba(255,215,0,0.4)) drop-shadow(0 2px 4px rgba(0,0,0,0.5)); }
-#trump-indicator .bidder-info { font-size: 13px; color: #e0e0e0; font-weight: 600; opacity: 1; }
+#trump-indicator .trump-row { display: flex; align-items: center; gap: 4px; }
+#trump-indicator .trump-label { display: none; }
+#trump-indicator .trump-icon { font-size: 36px; filter: drop-shadow(0 0 8px rgba(255,215,0,0.5)) drop-shadow(0 2px 6px rgba(0,0,0,0.6)); }
+#trump-indicator .bidder-info { font-size: 12px; color: #e0e0e0; font-weight: 600; text-shadow: 0 1px 6px rgba(0,0,0,0.8); }
 #trump-indicator.hidden { display: none; }
 
 /* ── PLAYER AREAS ── */
@@ -113,24 +113,25 @@ body {
 
 /* ── Turn arrow indicator ── */
 .turn-arrow {
-  position: absolute; width: 0; height: 0; z-index: 4;
-  border: 6px solid transparent;
-  opacity: 0.8;
+  position: absolute; z-index: 10;
+  color: #ffd700; font-size: 14px; line-height: 1;
   animation: pulse-arrow 1.2s ease-in-out infinite;
   pointer-events: none;
+  text-shadow: 0 0 6px rgba(255,215,0,0.6), 0 0 12px rgba(255,215,0,0.3);
+  filter: drop-shadow(0 0 3px rgba(255,215,0,0.5));
 }
 @keyframes pulse-arrow {
-  0%, 100% { opacity: 0.5; }
-  50% { opacity: 1; }
+  0%, 100% { opacity: 0.5; transform: var(--arrow-translate); }
+  50% { opacity: 1; transform: var(--arrow-translate); }
 }
 /* South: arrow above label pointing up */
-.turn-arrow.south { border-bottom: 8px solid #ffd700; border-top: 0; left: 50%; transform: translateX(-50%); bottom: 100%; margin-bottom: 4px; }
+.turn-arrow.south { --arrow-translate: translateX(-50%); left: 50%; bottom: 100%; margin-bottom: 2px; }
 /* North: arrow below label pointing down */
-.turn-arrow.north { border-top: 8px solid #ffd700; border-bottom: 0; left: 50%; transform: translateX(-50%); top: 100%; margin-top: 4px; }
+.turn-arrow.north { --arrow-translate: translateX(-50%); left: 50%; top: 100%; margin-top: 2px; }
 /* West: arrow right of label pointing right */
-.turn-arrow.west { border-left: 8px solid #ffd700; border-right: 0; top: 50%; transform: translateY(-50%); left: 100%; margin-left: 4px; }
+.turn-arrow.west { --arrow-translate: translateY(-50%); top: 50%; left: 100%; margin-left: 4px; }
 /* East: arrow left of label pointing left */
-.turn-arrow.east { border-right: 8px solid #ffd700; border-left: 0; top: 50%; transform: translateY(-50%); right: 100%; margin-right: 4px; }
+.turn-arrow.east { --arrow-translate: translateY(-50%); top: 50%; right: 100%; margin-right: 4px; }
 .player-label .dealer-chip {
   display: inline-block;
   background: linear-gradient(135deg, #ffe44d, #ffc400, #e6a800);
@@ -167,13 +168,13 @@ body {
 .card-front .card-br .card-suit-sm { font-size: 14px; margin-top: -1px; }
 .card-front .card-center { position: absolute; top: 50%; left: 50%; transform: translate(-50%,-50%); font-size: 38px; line-height: 1; opacity: 0.85; filter: drop-shadow(0 1px 1px rgba(0,0,0,0.1)); }
 .card-back {
-  background: linear-gradient(145deg, #2e5cb8, #1e48a0, #163888);
-  border: 2px solid #4080d0;
-  box-shadow: 0 4px 12px rgba(0,0,0,0.5), 0 1px 3px rgba(0,0,0,0.3), inset 0 1px 0 rgba(255,255,255,0.15);
+  background: linear-gradient(145deg, #4a8ae6, #3570d0, #2a5cb8);
+  border: 2px solid #6aa0f0;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.4), 0 1px 3px rgba(0,0,0,0.25), inset 0 1px 0 rgba(255,255,255,0.2);
   overflow: hidden;
 }
-.card-back::before { content: ''; position: absolute; inset: 5px; border: 1.5px solid rgba(255,215,0,0.2); border-radius: 5px; background: repeating-linear-gradient(45deg, transparent, transparent 4px, rgba(255,255,255,0.05) 4px, rgba(255,255,255,0.05) 8px); }
-.card-back::after { content: ''; position: absolute; top: 50%; left: 50%; transform: translate(-50%,-50%); width: 30px; height: 30px; border-radius: 50%; background: radial-gradient(circle, rgba(255,215,0,0.3), rgba(255,215,0,0.1) 50%, transparent 70%); border: 1px solid rgba(255,215,0,0.25); box-shadow: 0 0 10px rgba(255,215,0,0.15); }
+.card-back::before { content: ''; position: absolute; inset: 5px; border: 1.5px solid rgba(255,215,0,0.2); border-radius: 5px; background: repeating-linear-gradient(45deg, transparent, transparent 4px, rgba(255,255,255,0.06) 4px, rgba(255,255,255,0.06) 8px); }
+.card-back::after { content: ''; position: absolute; top: 50%; left: 50%; transform: translate(-50%,-50%); width: 30px; height: 30px; border-radius: 50%; background: radial-gradient(circle, rgba(255,215,0,0.35), rgba(255,215,0,0.12) 50%, transparent 70%); border: 1px solid rgba(255,215,0,0.3); box-shadow: 0 0 12px rgba(255,215,0,0.2); }
 .card.playable { cursor: pointer; border: 2px solid rgba(255,215,0,0.6); box-shadow: 0 4px 12px rgba(0,0,0,0.45), 0 0 10px rgba(255,215,0,0.15); }
 .card.playable:hover { transform: translateY(-16px) scale(1.06); box-shadow: 0 12px 30px rgba(0,0,0,0.5), 0 0 24px rgba(255,215,0,0.3); z-index: 10; border-color: #ffd700; }
 .opp-hand { position: relative; display: flex; align-items: center; justify-content: center; }
@@ -319,60 +320,59 @@ body {
   #table::before { inset: 10px; border-radius: 20px; }
   #table::after  { inset: 10px; border-radius: 20px; }
 
-  /* Scoreboard — compact, centered */
-  #scoreboard { top: 8px; padding: 4px 10px; gap: 6px; border-radius: 12px; font-size: 11px; }
+  /* Scoreboard — pushed down to clear iPhone notch/dynamic island */
+  #scoreboard { top: 36px; padding: 4px 10px; gap: 6px; border-radius: 12px; font-size: 11px; }
   .score-label { font-size: 8px; letter-spacing: 0.3px; max-width: 60px; overflow: hidden; text-overflow: ellipsis; }
   .score-val { font-size: 13px; min-width: 16px; }
   #game-info { font-size: 7px; }
 
-  /* Trump indicator — below scoreboard, compact */
-  #trump-indicator { top: 44px; left: 12px; padding: 4px 8px; border-radius: 8px; font-size: 10px; gap: 2px; }
-  #trump-indicator .trump-icon { font-size: 16px; }
-  #trump-indicator .trump-label { font-size: 8px; letter-spacing: 1px; }
+  /* Trump indicator — below scoreboard, no box */
+  #trump-indicator { top: 68px; left: 12px; font-size: 10px; gap: 3px; }
+  #trump-indicator .trump-icon { font-size: 20px; }
   #trump-indicator .bidder-info { font-size: 8px; }
 
   /* Host indicator */
-  #host-indicator { top: 44px; right: 12px; font-size: 8px; }
+  #host-indicator { top: 68px; right: 12px; font-size: 8px; }
 
   /* Controls */
-  #top-controls { top: 8px; right: 10px; gap: 3px; }
-  #lobby-controls { top: 44px; left: 12px; gap: 3px; }
+  #top-controls { top: 36px; right: 10px; gap: 3px; }
+  #lobby-controls { top: 68px; left: 12px; gap: 3px; }
   .ctrl-btn { padding: 3px 7px; font-size: 8px; border-radius: 6px; }
   #log-counter { font-size: 7px; padding: 2px 3px; }
 
-  /* Player areas — raise south so browser bar doesn't cover name */
+  /* Player areas */
   .player-area.south { bottom: 24px; }
-  .player-area.north { top: 70px; }
-  .player-area.west  { left: 10px; top: 38%; gap: 4px; }
-  .player-area.east  { right: 10px; top: 38%; gap: 4px; }
+  .player-area.north { top: 90px; }
+  .player-area.west  { left: 10px; top: 40%; gap: 4px; }
+  .player-area.east  { right: 10px; top: 40%; gap: 4px; }
   .player-label { font-size: 9px; padding: 2px 6px; border-radius: 7px; }
   .player-label .dealer-chip { font-size: 7px; padding: 1px 4px; border-radius: 4px; margin-left: 2px; }
 
-  /* Cards — bigger on mobile */
-  .card { width: 62px; height: 90px; border-radius: 7px; font-size: 14px; }
-  .card-front .card-tl .card-rank { font-size: 12px; }
-  .card-front .card-tl .card-suit-sm { font-size: 10px; }
-  .card-front .card-br .card-rank { font-size: 12px; }
-  .card-front .card-br .card-suit-sm { font-size: 10px; }
-  .card-front .card-center { font-size: 26px; }
-  .card.opp-card { width: 44px; height: 62px; }
-  .hand.south { gap: 0px; }
+  /* Cards — bigger to fill more screen */
+  .card { width: 68px; height: 98px; border-radius: 7px; font-size: 15px; }
+  .card-front .card-tl .card-rank { font-size: 13px; }
+  .card-front .card-tl .card-suit-sm { font-size: 11px; }
+  .card-front .card-br .card-rank { font-size: 13px; }
+  .card-front .card-br .card-suit-sm { font-size: 11px; }
+  .card-front .card-center { font-size: 28px; }
+  .card.opp-card { width: 48px; height: 68px; }
+  .hand.south { gap: -2px; }
   .card.playable:hover { transform: translateY(-8px) scale(1.03); }
 
   /* Trick area */
-  #trick-area { width: 180px; height: 160px; }
+  #trick-area { width: 190px; height: 170px; }
 
   /* Bid panel */
-  #bid-panel { bottom: 150px; }
+  #bid-panel { bottom: 160px; }
   #bid-prompt { font-size: 11px; }
-  .bid-btn { padding: 7px 12px; font-size: 11px; min-width: 36px; border-radius: 8px; }
+  .bid-btn { padding: 8px 14px; font-size: 12px; min-width: 38px; border-radius: 8px; }
 
   /* Bid bubbles */
   .bid-bubble { font-size: 9px; padding: 2px 8px; }
-  .bid-bubble.south { bottom: 140px; }
-  .bid-bubble.north { top: 130px; }
-  .bid-bubble.west  { left: 90px; }
-  .bid-bubble.east  { right: 90px; }
+  .bid-bubble.south { bottom: 150px; }
+  .bid-bubble.north { top: 150px; }
+  .bid-bubble.west  { left: 100px; }
+  .bid-bubble.east  { right: 100px; }
 
   /* Waiting indicator */
   #waiting-indicator { font-size: 11px; padding: 8px 16px; }
@@ -391,7 +391,7 @@ body {
   .host-only { display: none !important; }
 
   /* Log panel — above cards on mobile */
-  #log-panel { right: 8px; width: 130px; max-height: 80px; padding: 3px 6px; font-size: 8px; line-height: 1.3; border-radius: 8px; bottom: 150px; }
+  #log-panel { right: 8px; width: 130px; max-height: 80px; padding: 3px 6px; font-size: 8px; line-height: 1.3; border-radius: 8px; bottom: 160px; }
 
   /* Join panel */
   #join-panel { padding: 16px 20px; }
@@ -406,26 +406,28 @@ body {
 
 /* Extra small screens (iPhone SE etc) */
 @media (max-width: 400px) {
-  #scoreboard { padding: 3px 8px; gap: 4px; }
+  #scoreboard { top: 32px; padding: 3px 8px; gap: 4px; }
   .score-label { font-size: 7px; max-width: 50px; }
   .score-val { font-size: 12px; }
-  #trump-indicator { top: 40px; padding: 3px 6px; font-size: 9px; }
-  #trump-indicator .trump-icon { font-size: 14px; }
+  #trump-indicator { top: 60px; font-size: 9px; }
+  #trump-indicator .trump-icon { font-size: 16px; }
   #trump-indicator .bidder-info { font-size: 7px; }
-  .card { width: 52px; height: 75px; border-radius: 6px; }
-  .card-front .card-tl .card-rank { font-size: 11px; }
-  .card-front .card-tl .card-suit-sm { font-size: 9px; }
-  .card-front .card-br .card-rank { font-size: 11px; }
-  .card-front .card-br .card-suit-sm { font-size: 9px; }
-  .card-front .card-center { font-size: 20px; }
-  .card.opp-card { width: 38px; height: 54px; }
+  .card { width: 58px; height: 84px; border-radius: 6px; }
+  .card-front .card-tl .card-rank { font-size: 12px; }
+  .card-front .card-tl .card-suit-sm { font-size: 10px; }
+  .card-front .card-br .card-rank { font-size: 12px; }
+  .card-front .card-br .card-suit-sm { font-size: 10px; }
+  .card-front .card-center { font-size: 22px; }
+  .card.opp-card { width: 42px; height: 60px; }
   .player-area.south { bottom: 20px; }
+  .player-area.north { top: 82px; }
   .player-area.west { left: 6px; }
   .player-area.east { right: 6px; }
-  #trick-area { width: 150px; height: 140px; }
+  .hand.south { gap: -4px; }
+  #trick-area { width: 160px; height: 150px; }
   .bid-btn { padding: 6px 10px; font-size: 10px; }
-  #bid-panel { bottom: 130px; }
-  #log-panel { bottom: 130px; right: 6px; width: 110px; max-height: 60px; font-size: 7px; padding: 2px 5px; }
+  #bid-panel { bottom: 145px; }
+  #log-panel { bottom: 145px; right: 6px; width: 110px; max-height: 60px; font-size: 7px; padding: 2px 5px; }
 }
 </style>
 </head>
@@ -927,13 +929,20 @@ function setActiveTurn(absSeat) {
     const old = el.querySelector('.turn-arrow');
     if (old) old.remove();
   });
-  if (absSeat !== null && absSeat >= 0) {
+  if (absSeat !== null && absSeat >= 0 && mySeat >= 0) {
     const pos = viewPos(absSeat);
-    const el = document.getElementById(labelId(pos));
-    el.classList.add('active-turn');
-    const arrow = document.createElement('span');
-    arrow.className = `turn-arrow ${pos}`;
-    el.appendChild(arrow);
+    const elId = labelId(pos);
+    const el = elId ? document.getElementById(elId) : null;
+    if (el) {
+      el.classList.add('active-turn');
+      const arrow = document.createElement('span');
+      arrow.className = `turn-arrow ${pos}`;
+      // Unicode arrows pointing toward center
+      const arrowChars = {south: '\u25B2', north: '\u25BC', west: '\u25B6', east: '\u25C0'};
+      arrow.textContent = arrowChars[pos] || '\u25C6';
+      el.style.position = 'relative'; // ensure positioning context
+      el.appendChild(arrow);
+    }
   }
 }
 
