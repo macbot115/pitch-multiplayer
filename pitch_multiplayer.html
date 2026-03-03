@@ -70,6 +70,12 @@ body {
 .team1-color { color: #ff6b6b; }
 #game-info { font-size: 10px; opacity: 0.6; display: flex; align-items: center; gap: 6px; }
 
+#host-indicator {
+  position: absolute; top: 62px; left: 50%; transform: translateX(-50%);
+  font-size: 10px; color: #ffd700; opacity: 0.7; z-index: 20;
+  font-weight: 600; letter-spacing: 0.5px; white-space: nowrap;
+}
+
 #trump-indicator {
   position: absolute; top: 28px; left: 28px;
   display: flex; flex-direction: column; align-items: flex-start; gap: 4px;
@@ -296,6 +302,7 @@ body {
   .score-label { font-size: 9px; letter-spacing: 0.5px; }
   .score-val { font-size: 14px; min-width: 18px; }
   #game-info { font-size: 8px; }
+  #host-indicator { top: 46px; font-size: 9px; }
 
   /* Trump indicator */
   #trump-indicator { top: 12px; left: 12px; padding: 6px 10px; border-radius: 10px; font-size: 12px; }
@@ -398,6 +405,7 @@ body {
     <div id="game-info"><span id="hand-num">—</span></div>
     <div class="score-team"><span class="score-val team1-color" id="score1">0</span><span class="score-label team1-color" id="team1-label">Team B</span></div>
   </div>
+  <div id="host-indicator"></div>
   <div id="lobby-controls">
     <button class="ctrl-btn lobby-btn" id="randomize-teams-btn" onclick="send({type:'randomize-teams'})">Shuffle Teams</button>
     <button class="ctrl-btn lobby-btn" id="randomize-dealer-btn" onclick="send({type:'randomize-dealer'})">Shuffle Dealer</button>
@@ -429,7 +437,7 @@ body {
   <div id="waiting-indicator"></div>
   <div id="bid-panel"><div id="bid-prompt">Your bid:</div><div id="bid-buttons"></div></div>
   <div id="hand-result"><h2 id="result-title"></h2><div class="result-grid" id="result-grid"></div><div id="result-score-line"></div><div class="result-action"><button id="next-hand-btn" onclick="sendNextHand()">Next Hand</button></div></div>
-  <div id="game-over"><h1 id="go-title"></h1><p id="go-detail"></p><button onclick="sendNewGame()">Play Again</button></div>
+  <div id="game-over"><h1 id="go-title"></h1><p id="go-detail"></p><button id="play-again-btn" onclick="sendNewGame()">Play Again</button><p id="go-host-note" style="font-size:12px;opacity:0.6;margin-top:8px;"></p></div>
   <div id="log-panel"></div>
 </div>
 
@@ -472,6 +480,7 @@ let ws = null;
 let mySeat = -1;
 let myName = '';
 let isHost = false;
+let hostSeat = 0;
 let playerNames = ['','','',''];
 let teams = [0,1,0,1];
 let dealer = 0;
@@ -525,6 +534,16 @@ function connect() {
 
 function send(msg) { if (ws && ws.readyState === 1) ws.send(JSON.stringify(msg)); }
 
+function updateHostIndicator() {
+  const el = document.getElementById('host-indicator');
+  if (isHost) {
+    el.textContent = 'You are the host';
+  } else {
+    const hostName = playerNames[hostSeat] || '';
+    el.textContent = hostName ? `Host: ${hostName}` : '';
+  }
+}
+
 function joinGame() {
   const name = document.getElementById('name-input').value.trim();
   if (!name) return;
@@ -559,7 +578,8 @@ function handleMessage(msg) {
     case 'lobby':
       // Ignore lobby messages while in-game (e.g. from stale broadcasts)
       if (inGame) break;
-      isHost = (mySeat === msg.hostSeat);
+      hostSeat = msg.hostSeat;
+      isHost = (mySeat === hostSeat);
       teams = msg.teams || [0,1,0,1];
       dealer = msg.dealer || 0;
       document.getElementById('new-game-btn').style.display = 'none';
@@ -568,6 +588,7 @@ function handleMessage(msg) {
         el.classList.toggle('show', isHost);
       });
       updateLobby(msg.players);
+      updateHostIndicator();
       break;
 
     case 'error':
@@ -597,7 +618,10 @@ function handleMessage(msg) {
       updateScoreboard(); updateLabels(); renderMyHand(); renderAllOpp();
       document.getElementById('hand-num').textContent = `Hand ${handNum}`;
       log(`Hand ${handNum} — Dealer: ${playerNames[dealer]}`);
-      document.getElementById('new-game-btn').style.display = '';
+      document.getElementById('new-game-btn').style.display = isHost ? '' : 'none';
+      // Show host-only controls for host
+      document.querySelectorAll('.host-only').forEach(el => { el.classList.toggle('show', isHost); });
+      updateHostIndicator();
       // Start GameLog
       const fakeHands = [myHand, [], [], []]; // only log our own hand
       GameLog.startHand(dealer, fakeHands, scores);
@@ -706,6 +730,22 @@ function handleMessage(msg) {
           el.innerHTML = `${msg.name}${teamDot}${dealerChip}`;
         }
       }
+      break;
+
+    case 'new-game-reset':
+      // Server told everyone the game is resetting — clear inGame so lobby messages work
+      inGame = false;
+      document.getElementById('game-over').classList.remove('show');
+      document.getElementById('hand-result').classList.remove('show');
+      document.getElementById('trump-indicator').classList.add('hidden');
+      clearTrickArea(); clearBidBubbles(); hideWaiting();
+      document.getElementById('hand-south').innerHTML = '';
+      document.getElementById('hand-north').innerHTML = '';
+      document.getElementById('hand-west').innerHTML = '';
+      document.getElementById('hand-east').innerHTML = '';
+      document.getElementById('lobby-status').classList.remove('hidden');
+      document.getElementById('new-game-btn').style.display = 'none';
+      log('New game started', 'highlight');
       break;
   }
 }
@@ -995,6 +1035,8 @@ function showHandResult(msg) {
       const weWon = msg.winner === myTeam;
       document.getElementById('go-title').textContent = weWon ? 'Your Team Wins!' : 'Opponents Win!';
       document.getElementById('go-detail').textContent = `Final Score: ${scores[myTeam]||0} - ${scores[1-myTeam]||0}`;
+      document.getElementById('play-again-btn').style.display = isHost ? '' : 'none';
+      document.getElementById('go-host-note').textContent = isHost ? '' : 'Waiting for host to start new game...';
       document.getElementById('game-over').classList.add('show');
     }, 2000);
   }

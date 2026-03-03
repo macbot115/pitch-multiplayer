@@ -404,6 +404,8 @@ function newGame() {
   room.handNum = 0;
   room.dealer = Math.floor(Math.random() * 4);
   room.phase = 'lobby';
+  // Tell ALL clients to reset to lobby (they need to clear inGame flag first)
+  broadcast({ type: 'new-game-reset' });
   broadcastLobby();
 }
 
@@ -588,6 +590,11 @@ wss.on('connection', (ws) => {
       }
 
       case 'new-game': {
+        const curSeat = seatOfWs(ws);
+        if (curSeat !== room.hostSeat) {
+          ws.send(JSON.stringify({ type: 'error', message: 'Only the host can start a new game' }));
+          return;
+        }
         newGame();
         break;
       }
