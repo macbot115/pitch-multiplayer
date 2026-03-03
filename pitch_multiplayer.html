@@ -260,6 +260,8 @@ body {
 /* ── PRE-GAME CONTROLS (top right) ── */
 .ctrl-btn.lobby-btn { display: none; }
 .ctrl-btn.lobby-btn.show { display: inline-block; }
+.host-only { display: none; }
+.host-only.show { display: inline-block; }
 #start-game-btn { background: linear-gradient(135deg, #66bb6a, #43a047); color: #fff; border-color: rgba(102,187,106,0.4); }
 #start-game-btn:disabled { opacity: 0.3; cursor: not-allowed; }
 #randomize-teams-btn { background: rgba(100,181,246,0.2); color: #6ec6ff; border-color: rgba(100,181,246,0.4); }
@@ -354,8 +356,8 @@ body {
   #game-over p { font-size: 14px; }
   #game-over button { padding: 10px 24px; font-size: 14px; }
 
-  /* Hide export/clear on mobile */
-  .desktop-only { display: none !important; }
+  /* Hide export/clear/log-counter on mobile even for host */
+  .host-only { display: none !important; }
 
   /* Log panel — above cards on mobile */
   #log-panel { bottom: auto; top: auto; right: 10px; width: 140px; max-height: 90px; padding: 4px 8px; font-size: 9px; line-height: 1.3; border-radius: 8px; bottom: 140px; }
@@ -403,9 +405,9 @@ body {
   </div>
   <div id="top-controls">
     <button class="ctrl-btn" id="new-game-btn" onclick="send({type:'new-game'})" style="display:none">New Game</button>
-    <span id="log-counter" class="desktop-only">0 logged</span>
-    <button class="ctrl-btn desktop-only" onclick="GameLog.exportJSON()">Export Log</button>
-    <button class="ctrl-btn desktop-only" onclick="if(confirm('Clear all logged data?'))GameLog.clear()">Clear Log</button>
+    <span id="log-counter" class="host-only">0 logged</span>
+    <button class="ctrl-btn host-only" onclick="GameLog.exportJSON()">Export Log</button>
+    <button class="ctrl-btn host-only" onclick="if(confirm('Clear all logged data?'))GameLog.clear()">Clear Log</button>
   </div>
   <div class="player-area south" id="pa-south">
     <div class="hand south" id="hand-south"></div>
@@ -482,6 +484,7 @@ let scores = {0:0, 1:0};
 let handNum = 0;
 let currentTrick = [];
 let tricks = [];
+let inGame = false;
 
 // Perspective: map absolute seat → visual position
 // We always see ourselves at south
@@ -551,10 +554,16 @@ function handleMessage(msg) {
       break;
 
     case 'lobby':
+      // Ignore lobby messages while in-game (e.g. from stale broadcasts)
+      if (inGame) break;
       isHost = (mySeat === msg.hostSeat);
       teams = msg.teams || [0,1,0,1];
       dealer = msg.dealer || 0;
       document.getElementById('new-game-btn').style.display = 'none';
+      // Show/hide host-only controls
+      document.querySelectorAll('.host-only').forEach(el => {
+        el.classList.toggle('show', isHost);
+      });
       updateLobby(msg.players);
       break;
 
@@ -563,6 +572,7 @@ function handleMessage(msg) {
       break;
 
     case 'hand-dealt':
+      inGame = true;
       document.getElementById('join-panel').classList.add('hidden');
       document.getElementById('lobby-status').classList.add('hidden');
       // Hide lobby buttons
@@ -934,6 +944,7 @@ function sendNextHand() {
 }
 
 function sendNewGame() {
+  inGame = false;
   document.getElementById('game-over').classList.remove('show');
   document.getElementById('hand-result').classList.remove('show');
   document.getElementById('trump-indicator').classList.add('hidden');

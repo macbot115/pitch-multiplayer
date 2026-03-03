@@ -473,7 +473,11 @@ wss.on('connection', (ws) => {
         mySeat = seat;
         console.log(`  → ${msg.name} joined as Seat ${seat+1} (${playerCount()}/4 players)`);
         ws.send(JSON.stringify({ type: 'joined', seat: mySeat, name: msg.name }));
-        broadcastLobby();
+
+        // Only show lobby UI when actually in lobby phase
+        if (room.phase === 'lobby') {
+          broadcastLobby();
+        }
 
         // Notify everyone this player reconnected
         broadcast({ type: 'player-reconnected', seat: mySeat, name: msg.name });
