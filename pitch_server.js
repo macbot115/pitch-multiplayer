@@ -138,6 +138,10 @@ function sendTo(seat, msg) {
   if (p && p.ws && p.ws.readyState === 1) p.ws.send(JSON.stringify(msg));
 }
 
+function seatOfWs(ws) {
+  return room.players.findIndex(p => p && p.ws === ws);
+}
+
 function broadcastLobby() {
   broadcast({
     type: 'lobby',
@@ -521,8 +525,28 @@ wss.on('connection', (ws) => {
 
       case 'randomize-teams': {
         if (room.phase !== 'lobby') return;
-        room.teams = shuffle([0,1,0,1]);
-        console.log(`  → Teams randomized: [${room.teams}]`);
+        // Physically shuffle players across seats so teammates sit across (seats 0,2 = team, 1,3 = team)
+        // Keep teams fixed as [0,1,0,1] — shuffle player assignments instead
+        room.teams = [0,1,0,1];
+        const names = room.players.map(p => p ? { name: p.name, ws: p.ws, connected: p.connected } : null);
+        const filled = names.filter(n => n !== null);
+        shuffle(filled);
+        for (let i = 0; i < 4; i++) {
+          if (i < filled.length) {
+            room.players[i] = { ws: filled[i].ws, name: filled[i].name, seat: i, connected: filled[i].connected };
+          } else {
+            room.players[i] = null;
+          }
+        }
+        // Update hostSeat to first connected player
+        room.hostSeat = room.players.findIndex(p => p && p.connected);
+        // Tell each client their new seat
+        for (let i = 0; i < 4; i++) {
+          if (room.players[i] && room.players[i].ws && room.players[i].ws.readyState === 1) {
+            room.players[i].ws.send(JSON.stringify({ type: 'joined', seat: i, name: room.players[i].name }));
+          }
+        }
+        console.log(`  → Teams shuffled: ${room.players.map((p,i) => p ? `Seat${i+1}=${p.name}(T${room.teams[i]})` : 'empty').join(', ')}`);
         broadcastLobby();
         break;
       }
@@ -543,12 +567,14 @@ wss.on('connection', (ws) => {
       }
 
       case 'bid': {
-        handleBid(mySeat, msg.bid);
+        const curSeat = seatOfWs(ws);
+        if (curSeat >= 0) handleBid(curSeat, msg.bid);
         break;
       }
 
       case 'play': {
-        handlePlay(mySeat, msg.card);
+        const curSeat = seatOfWs(ws);
+        if (curSeat >= 0) handlePlay(curSeat, msg.card);
         break;
       }
 
@@ -558,7 +584,6 @@ wss.on('connection', (ws) => {
       }
 
       case 'new-game': {
-        if (mySeat !== room.hostSeat) return;
         newGame();
         break;
       }
@@ -566,20 +591,16 @@ wss.on('connection', (ws) => {
   });
 
   ws.on('close', () => {
-    console.log(`  → Connection closed (Seat ${mySeat >= 0 ? mySeat+1 : '?'})`);
-    if (mySeat >= 0 && room.players[mySeat]) {
-      // Only mark disconnected if THIS ws is still the active one for the seat
-      // (prevents race condition where old ws close fires after new ws connects)
-      if (room.players[mySeat].ws === ws) {
-        room.players[mySeat].connected = false;
-        broadcast({ type: 'player-disconnected', seat: mySeat, name: room.players[mySeat].name });
-        if (room.phase === 'lobby') {
-          room.players[mySeat] = null;
-          while (room.players.length > 0 && room.players[room.players.length-1] === null) room.players.pop();
-          broadcastLobby();
-        }
-      } else {
-        console.log(`  → Ignoring stale close for Seat ${mySeat+1} (already reconnected)`);
+    // Use dynamic lookup — mySeat closure may be stale after team shuffle
+    const actualSeat = seatOfWs(ws);
+    console.log(`  → Connection closed (Seat ${actualSeat >= 0 ? actualSeat+1 : '?'})`);
+    if (actualSeat >= 0 && room.players[actualSeat]) {
+      room.players[actualSeat].connected = false;
+      broadcast({ type: 'player-disconnected', seat: actualSeat, name: room.players[actualSeat].name });
+      if (room.phase === 'lobby') {
+        room.players[actualSeat] = null;
+        while (room.players.length > 0 && room.players[room.players.length-1] === null) room.players.pop();
+        broadcastLobby();
       }
     }
   });

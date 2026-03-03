@@ -354,8 +354,11 @@ body {
   #game-over p { font-size: 14px; }
   #game-over button { padding: 10px 24px; font-size: 14px; }
 
+  /* Hide export/clear on mobile */
+  .desktop-only { display: none !important; }
+
   /* Log panel — above cards on mobile */
-  #log-panel { bottom: auto; top: auto; right: 10px; width: 140px; max-height: 90px; padding: 4px 8px; font-size: 9px; line-height: 1.3; border-radius: 8px; bottom: 120px; }
+  #log-panel { bottom: auto; top: auto; right: 10px; width: 140px; max-height: 90px; padding: 4px 8px; font-size: 9px; line-height: 1.3; border-radius: 8px; bottom: 140px; }
 
   /* Join panel */
   #join-panel { padding: 18px 24px; }
@@ -381,7 +384,7 @@ body {
   .player-area.east { right: 8px; }
   #trick-area { width: 160px; height: 150px; }
   .bid-btn { padding: 6px 10px; font-size: 11px; }
-  #log-panel { bottom: 100px; right: 6px; width: 120px; max-height: 70px; font-size: 8px; padding: 3px 6px; }
+  #log-panel { bottom: 120px; right: 6px; width: 120px; max-height: 70px; font-size: 8px; padding: 3px 6px; }
 }
 </style>
 </head>
@@ -399,10 +402,10 @@ body {
     <button class="ctrl-btn lobby-btn" id="start-game-btn" disabled onclick="send({type:'start-game'})">Start Game</button>
   </div>
   <div id="top-controls">
-    <button class="ctrl-btn" id="new-game-btn" onclick="sendNewGame()" style="display:none">New Game</button>
-    <span id="log-counter">0 logged</span>
-    <button class="ctrl-btn" onclick="GameLog.exportJSON()">Export Log</button>
-    <button class="ctrl-btn" onclick="if(confirm('Clear all logged data?'))GameLog.clear()">Clear Log</button>
+    <button class="ctrl-btn" id="new-game-btn" onclick="send({type:'new-game'})" style="display:none">New Game</button>
+    <span id="log-counter" class="desktop-only">0 logged</span>
+    <button class="ctrl-btn desktop-only" onclick="GameLog.exportJSON()">Export Log</button>
+    <button class="ctrl-btn desktop-only" onclick="if(confirm('Clear all logged data?'))GameLog.clear()">Clear Log</button>
   </div>
   <div class="player-area south" id="pa-south">
     <div class="hand south" id="hand-south"></div>
@@ -424,7 +427,7 @@ body {
   <div id="waiting-indicator"></div>
   <div id="bid-panel"><div id="bid-prompt">Your bid:</div><div id="bid-buttons"></div></div>
   <div id="hand-result"><h2 id="result-title"></h2><div class="result-grid" id="result-grid"></div><div id="result-score-line"></div><div class="result-action"><button id="next-hand-btn" onclick="sendNextHand()">Next Hand</button></div></div>
-  <div id="game-over"><h1 id="go-title"></h1><p id="go-detail"></p><button onclick="sendNewGame()">New Game</button></div>
+  <div id="game-over"><h1 id="go-title"></h1><p id="go-detail"></p><button onclick="sendNewGame()">Play Again</button></div>
   <div id="log-panel"></div>
 </div>
 
@@ -551,6 +554,7 @@ function handleMessage(msg) {
       isHost = (mySeat === msg.hostSeat);
       teams = msg.teams || [0,1,0,1];
       dealer = msg.dealer || 0;
+      document.getElementById('new-game-btn').style.display = 'none';
       updateLobby(msg.players);
       break;
 
@@ -580,7 +584,7 @@ function handleMessage(msg) {
       updateScoreboard(); updateLabels(); renderMyHand(); renderAllOpp();
       document.getElementById('hand-num').textContent = `Hand ${handNum}`;
       log(`Hand ${handNum} — Dealer: ${playerNames[dealer]}`);
-      if (isHost) document.getElementById('new-game-btn').style.display = '';
+      document.getElementById('new-game-btn').style.display = '';
       // Start GameLog
       const fakeHands = [myHand, [], [], []]; // only log our own hand
       GameLog.startHand(dealer, fakeHands, scores);
@@ -968,8 +972,8 @@ function showHandResult(msg) {
   document.getElementById('result-score-line').innerHTML = `<div style="margin-top:8px;font-size:13px;">Score: <span class="team0-color">${scores[myTeam]||0}</span> | <span class="team1-color">${scores[1-myTeam]||0}</span></div>`;
   log(`${made?'MADE':'SET'} — Score: ${scores[myTeam]||0}-${scores[1-myTeam]||0}`, 'score-change');
 
-  // Only host sees Next Hand button
-  document.getElementById('next-hand-btn').style.display = isHost ? '' : 'none';
+  // All players can click Next Hand
+  document.getElementById('next-hand-btn').style.display = '';
   el.classList.add('show');
 
   // GameLog finish — now with full training data from server
