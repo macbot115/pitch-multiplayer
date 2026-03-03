@@ -415,13 +415,32 @@ wss.on('connection', (ws) => {
 
     switch (msg.type) {
       case 'join': {
-        let seat = room.players.findIndex(p => p && p.name === msg.name && !p.connected);
+        const joinName = msg.name.trim();
+        // 1. Try exact name match (disconnected)
+        let seat = room.players.findIndex(p => p && p.name === joinName && !p.connected);
+        // 2. Try exact name match (connected but stale ws — handles race condition)
+        if (seat === -1) {
+          seat = room.players.findIndex(p => p && p.name === joinName && p.connected && p.ws !== ws && (!p.ws || p.ws.readyState !== 1));
+        }
+        // 3. Try case-insensitive name match (disconnected)
+        if (seat === -1) {
+          seat = room.players.findIndex(p => p && p.name.toLowerCase() === joinName.toLowerCase() && !p.connected);
+        }
+        // 4. During active game, allow claiming any disconnected seat
+        if (seat === -1 && room.phase !== 'lobby') {
+          seat = room.players.findIndex(p => p && !p.connected);
+          if (seat !== -1) {
+            console.log(`  → ${joinName} taking over disconnected Seat ${seat+1} (was ${room.players[seat].name})`);
+            room.players[seat].name = joinName;
+          }
+        }
+        // 5. If still no seat, look for an empty slot (lobby only makes sense)
         if (seat === -1) {
           seat = room.players.findIndex(p => p === null);
           if (seat === -1 && room.players.length < 4) seat = room.players.length;
           if (seat === -1 || seat >= 4) { ws.send(JSON.stringify({ type: 'error', message: 'Game is full' })); return; }
           while (room.players.length <= seat) room.players.push(null);
-          room.players[seat] = { ws, name: msg.name, seat, connected: true };
+          room.players[seat] = { ws, name: joinName, seat, connected: true };
         } else {
           room.players[seat].ws = ws;
           room.players[seat].connected = true;
@@ -526,12 +545,18 @@ wss.on('connection', (ws) => {
   ws.on('close', () => {
     console.log(`  → Connection closed (Seat ${mySeat >= 0 ? mySeat+1 : '?'})`);
     if (mySeat >= 0 && room.players[mySeat]) {
-      room.players[mySeat].connected = false;
-      broadcast({ type: 'player-disconnected', seat: mySeat, name: room.players[mySeat].name });
-      if (room.phase === 'lobby') {
-        room.players[mySeat] = null;
-        while (room.players.length > 0 && room.players[room.players.length-1] === null) room.players.pop();
-        broadcastLobby();
+      // Only mark disconnected if THIS ws is still the active one for the seat
+      // (prevents race condition where old ws close fires after new ws connects)
+      if (room.players[mySeat].ws === ws) {
+        room.players[mySeat].connected = false;
+        broadcast({ type: 'player-disconnected', seat: mySeat, name: room.players[mySeat].name });
+        if (room.phase === 'lobby') {
+          room.players[mySeat] = null;
+          while (room.players.length > 0 && room.players[room.players.length-1] === null) room.players.pop();
+          broadcastLobby();
+        }
+      } else {
+        console.log(`  → Ignoring stale close for Seat ${mySeat+1} (already reconnected)`);
       }
     }
   });

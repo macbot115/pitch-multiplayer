@@ -232,40 +232,46 @@ body {
 @keyframes dealCard { from { opacity: 0; transform: scale(0.5) rotate(10deg); } to { opacity: 1; transform: scale(1) rotate(0); } }
 .card.dealing { animation: dealCard 0.3s ease forwards; }
 
-/* ── LOBBY OVERLAY ── */
-#lobby-overlay {
-  position: absolute; inset: 0; z-index: 200;
-  background: rgba(0,0,0,0.92);
-  display: flex; justify-content: center; align-items: center;
-  backdrop-filter: blur(8px);
+/* ── JOIN PANEL (center of table, pre-game) ── */
+#join-panel {
+  position: absolute; top: 50%; left: 50%; transform: translate(-50%,-50%);
+  z-index: 50; text-align: center;
+  background: rgba(10,8,5,0.85); padding: 24px 32px; border-radius: 18px;
+  border: 1px solid rgba(255,215,0,0.3); backdrop-filter: blur(12px);
+  box-shadow: 0 8px 40px rgba(0,0,0,0.6);
 }
-#lobby-overlay.hidden { display: none; }
-#lobby-box {
-  background: rgba(20,18,14,0.95); border: 1px solid rgba(255,215,0,0.3);
-  border-radius: 20px; padding: 30px 40px; min-width: 360px;
-  text-align: center; box-shadow: 0 8px 40px rgba(0,0,0,0.6);
-}
-#lobby-box h1 { color: #ffd700; font-size: 28px; margin-bottom: 6px; }
-#lobby-box h2 { color: #e0e0e0; font-size: 14px; opacity: 0.6; margin-bottom: 20px; font-weight: 400; }
-#name-input { background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.2); border-radius: 10px; padding: 10px 16px; color: #fff; font-size: 15px; width: 100%; text-align: center; outline: none; margin-bottom: 12px; }
+#join-panel.hidden { display: none; }
+#join-panel h1 { color: #ffd700; font-size: 24px; margin-bottom: 4px; }
+#join-panel h2 { color: #e0e0e0; font-size: 12px; opacity: 0.5; margin-bottom: 16px; font-weight: 400; }
+#name-input { background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.2); border-radius: 10px; padding: 10px 16px; color: #fff; font-size: 15px; width: 220px; text-align: center; outline: none; margin-bottom: 10px; }
 #name-input:focus { border-color: #ffd700; }
-#join-btn { padding: 10px 30px; border: none; border-radius: 12px; background: linear-gradient(135deg, #ffc107, #f9a825, #f57f17); color: #000; font-size: 15px; font-weight: 700; cursor: pointer; margin-bottom: 20px; }
+#join-btn { padding: 10px 30px; border: none; border-radius: 12px; background: linear-gradient(135deg, #ffc107, #f9a825, #f57f17); color: #000; font-size: 15px; font-weight: 700; cursor: pointer; }
 #join-btn:disabled { opacity: 0.4; cursor: not-allowed; }
-#player-list { text-align: left; margin: 10px 0; }
-.lobby-player { padding: 6px 10px; margin: 4px 0; border-radius: 8px; background: rgba(255,255,255,0.05); font-size: 13px; font-weight: 600; display: flex; justify-content: space-between; }
-.lobby-player .team-badge { font-size: 11px; padding: 2px 8px; border-radius: 6px; font-weight: 700; }
-.lobby-player .team-badge.team0 { background: rgba(100,181,246,0.3); color: #6ec6ff; }
-.lobby-player .team-badge.team1 { background: rgba(239,83,80,0.3); color: #ff6b6b; }
-.lobby-player.empty { opacity: 0.3; font-style: italic; }
-.lobby-player.disconnected { opacity: 0.5; }
-#host-controls { margin-top: 16px; display: flex; flex-direction: column; gap: 8px; }
-#host-controls button { padding: 8px 16px; border: none; border-radius: 10px; font-size: 13px; font-weight: 700; cursor: pointer; }
-#randomize-teams-btn { background: rgba(100,181,246,0.3); color: #6ec6ff; border: 1px solid rgba(100,181,246,0.4); }
-#randomize-dealer-btn { background: rgba(255,215,0,0.2); color: #ffd700; border: 1px solid rgba(255,215,0,0.3); }
-#start-game-btn { background: linear-gradient(135deg, #66bb6a, #43a047); color: #fff; font-size: 15px; padding: 10px 20px; }
-#start-game-btn:disabled { opacity: 0.3; cursor: not-allowed; }
-#dealer-display { color: #ffd700; font-size: 12px; margin-top: 4px; opacity: 0.7; }
 #connection-status { font-size: 11px; margin-top: 8px; opacity: 0.5; }
+
+/* ── LOBBY LABEL STATES ── */
+.player-label.waiting-seat { opacity: 0.3; font-style: italic; }
+.player-label.seat-filled { opacity: 1; }
+.player-label .team-dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin-left: 6px; vertical-align: middle; }
+.player-label .team-dot.team0 { background: #6ec6ff; box-shadow: 0 0 6px rgba(100,181,246,0.5); }
+.player-label .team-dot.team1 { background: #ff6b6b; box-shadow: 0 0 6px rgba(239,83,80,0.5); }
+
+/* ── PRE-GAME CONTROLS (top right) ── */
+.ctrl-btn.lobby-btn { display: none; }
+.ctrl-btn.lobby-btn.show { display: inline-block; }
+#start-game-btn { background: linear-gradient(135deg, #66bb6a, #43a047); color: #fff; border-color: rgba(102,187,106,0.4); }
+#start-game-btn:disabled { opacity: 0.3; cursor: not-allowed; }
+#randomize-teams-btn { background: rgba(100,181,246,0.2); color: #6ec6ff; border-color: rgba(100,181,246,0.4); }
+#randomize-dealer-btn { background: rgba(255,215,0,0.15); color: #ffd700; border-color: rgba(255,215,0,0.3); }
+
+/* ── LOBBY STATUS (center, after joining) ── */
+#lobby-status {
+  position: absolute; top: 50%; left: 50%; transform: translate(-50%,-50%);
+  z-index: 25; text-align: center;
+  color: #ffd700; font-size: 15px; font-weight: 700;
+  text-shadow: 0 2px 6px rgba(0,0,0,0.7);
+}
+#lobby-status.hidden { display: none; }
 </style>
 </head>
 <body>
@@ -277,6 +283,9 @@ body {
     <div class="score-team"><span class="score-val team1-color" id="score1">0</span><span class="score-label team1-color" id="team1-label">Team B</span></div>
   </div>
   <div id="top-controls">
+    <button class="ctrl-btn lobby-btn" id="randomize-teams-btn" onclick="send({type:'randomize-teams'})">Shuffle Teams</button>
+    <button class="ctrl-btn lobby-btn" id="randomize-dealer-btn" onclick="send({type:'randomize-dealer'})">Shuffle Dealer</button>
+    <button class="ctrl-btn lobby-btn" id="start-game-btn" disabled onclick="send({type:'start-game'})">Start Game</button>
     <button class="ctrl-btn" id="new-game-btn" onclick="sendNewGame()" style="display:none">New Game</button>
     <span id="log-counter">0 logged</span>
     <button class="ctrl-btn" onclick="GameLog.exportJSON()">Export Log</button>
@@ -306,23 +315,15 @@ body {
   <div id="log-panel"></div>
 </div>
 
-<div id="lobby-overlay">
-  <div id="lobby-box">
+  <div id="join-panel">
     <h1>Pitch</h1>
     <h2>Hi-Lo-Jack Multiplayer</h2>
     <input type="text" id="name-input" placeholder="Enter your name" maxlength="20" autocomplete="off">
     <br>
     <button id="join-btn" onclick="joinGame()">Join Game</button>
-    <div id="player-list"></div>
-    <div id="dealer-display"></div>
-    <div id="host-controls" style="display:none">
-      <button id="randomize-teams-btn" onclick="send({type:'randomize-teams'})">Randomize Teams</button>
-      <button id="randomize-dealer-btn" onclick="send({type:'randomize-dealer'})">Randomize Dealer</button>
-      <button id="start-game-btn" disabled onclick="send({type:'start-game'})">Start Game (need 4 players)</button>
-    </div>
     <div id="connection-status">Connecting...</div>
   </div>
-</div>
+  <div id="lobby-status" class="hidden"></div>
 
 <script>
 // ══════════════════════════════════════════
@@ -411,6 +412,10 @@ function joinGame() {
   myName = name;
   send({ type: 'join', name });
   document.getElementById('join-btn').disabled = true;
+  // Hide join panel, show lobby status on the felt
+  document.getElementById('join-panel').classList.add('hidden');
+  document.getElementById('lobby-status').classList.remove('hidden');
+  document.getElementById('lobby-status').textContent = 'Waiting for players...';
 }
 
 // Enter key to join
@@ -424,6 +429,9 @@ function handleMessage(msg) {
     case 'joined':
       mySeat = msg.seat;
       myName = msg.name;
+      // Hide join panel, show table
+      document.getElementById('join-panel').classList.add('hidden');
+      document.getElementById('lobby-status').classList.remove('hidden');
       break;
 
     case 'lobby':
@@ -438,7 +446,10 @@ function handleMessage(msg) {
       break;
 
     case 'hand-dealt':
-      document.getElementById('lobby-overlay').classList.add('hidden');
+      document.getElementById('join-panel').classList.add('hidden');
+      document.getElementById('lobby-status').classList.add('hidden');
+      // Hide lobby buttons
+      document.querySelectorAll('.lobby-btn').forEach(b => b.classList.remove('show'));
       myHand = msg.hand.map(toCard).sort((a,b) => a.suit-b.suit || a.rank-b.rank);
       dealer = msg.dealer;
       handNum = msg.handNum;
@@ -555,32 +566,62 @@ function handleMessage(msg) {
 }
 
 // ══════════════════════════════════════════
-// LOBBY UI
+// LOBBY UI — uses the game table directly
 // ══════════════════════════════════════════
 function updateLobby(players) {
-  const list = document.getElementById('player-list');
-  const teamNames = ['Team A','Team B'];
-  let html = '';
   let count = 0;
+  // Store player names
   for (let i = 0; i < 4; i++) {
     const p = players && players[i];
     if (p && p.name) {
-      const t = teams[i];
-      const disc = p.connected === false ? ' disconnected' : '';
-      html += `<div class="lobby-player${disc}"><span>Seat ${i+1}: ${p.name}${p.connected===false?' (offline)':''}</span><span class="team-badge team${t}">${teamNames[t]}</span></div>`;
+      playerNames[i] = p.name;
       if (p.connected !== false) count++;
     } else {
-      html += `<div class="lobby-player empty">Seat ${i+1}: waiting...</div>`;
+      playerNames[i] = '';
     }
   }
-  list.innerHTML = html;
-  document.getElementById('dealer-display').textContent = `First dealer: Seat ${dealer+1}${players && players[dealer] ? ' ('+players[dealer].name+')' : ''}`;
 
-  if (isHost) {
-    document.getElementById('host-controls').style.display = '';
-    const btn = document.getElementById('start-game-btn');
-    btn.disabled = count < 4;
-    btn.textContent = count < 4 ? `Start Game (need ${4-count} more)` : 'Start Game';
+  // Update the player labels on the felt
+  for (let i = 0; i < 4; i++) {
+    const pos = mySeat >= 0 ? viewPos(i) : ['south','west','north','east'][i];
+    const el = document.getElementById(labelId(pos));
+    const p = players && players[i];
+    if (p && p.name) {
+      const teamDot = `<span class="team-dot team${teams[i]}"></span>`;
+      const dealerChip = i === dealer ? ' <span class="dealer-chip">D</span>' : '';
+      const disc = p.connected === false ? ' <span style="opacity:0.5;font-size:10px">(offline)</span>' : '';
+      el.innerHTML = `${p.name}${disc}${teamDot}${dealerChip}`;
+      el.classList.remove('waiting-seat');
+      el.classList.add('seat-filled');
+    } else {
+      el.innerHTML = 'Waiting...';
+      el.classList.add('waiting-seat');
+      el.classList.remove('seat-filled');
+    }
+  }
+
+  // Update center lobby status
+  const lobbyStatus = document.getElementById('lobby-status');
+  if (mySeat >= 0) {
+    if (count < 4) {
+      lobbyStatus.textContent = `${count}/4 players — waiting for ${4-count} more...`;
+      lobbyStatus.classList.remove('hidden');
+    } else {
+      lobbyStatus.textContent = isHost ? '' : 'Waiting for host to start...';
+      if (!isHost && count >= 4) lobbyStatus.classList.remove('hidden');
+      else lobbyStatus.classList.add('hidden');
+    }
+  }
+
+  // Show/hide lobby control buttons for host
+  const lobbyBtns = document.querySelectorAll('.lobby-btn');
+  if (isHost && mySeat >= 0) {
+    lobbyBtns.forEach(b => b.classList.add('show'));
+    const startBtn = document.getElementById('start-game-btn');
+    startBtn.disabled = count < 4;
+    startBtn.textContent = count < 4 ? `Start (${count}/4)` : 'Start Game';
+  } else {
+    lobbyBtns.forEach(b => b.classList.remove('show'));
   }
 }
 
@@ -758,6 +799,14 @@ function sendNextHand() {
 
 function sendNewGame() {
   document.getElementById('game-over').classList.remove('show');
+  document.getElementById('hand-result').classList.remove('show');
+  document.getElementById('trump-indicator').classList.add('hidden');
+  clearTrickArea(); clearBidBubbles(); hideWaiting();
+  document.getElementById('hand-south').innerHTML = '';
+  document.getElementById('hand-north').innerHTML = '';
+  document.getElementById('hand-west').innerHTML = '';
+  document.getElementById('hand-east').innerHTML = '';
+  document.getElementById('lobby-status').classList.remove('hidden');
   send({ type: 'new-game' });
 }
 
@@ -861,6 +910,12 @@ const GameLog = {
 // ══════════════════════════════════════════
 // INIT
 // ══════════════════════════════════════════
+// Set initial labels to "Waiting..."
+['label-south','label-north','label-west','label-east'].forEach(id => {
+  const el = document.getElementById(id);
+  el.innerHTML = 'Waiting...';
+  el.classList.add('waiting-seat');
+});
 connect();
 document.getElementById('name-input').focus();
 </script>
