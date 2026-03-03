@@ -31,8 +31,8 @@ body {
   inset: 22px;
   border-radius: 40px;
   background:
-    radial-gradient(ellipse 55% 45% at 50% 42%, rgba(80,160,60,0.25) 0%, transparent 70%),
-    radial-gradient(ellipse at center, #1e7a2e 0%, #166b24 25%, #0f5a1a 50%, #0a4012 75%, #062a0c 100%);
+    radial-gradient(ellipse 55% 45% at 50% 42%, rgba(100,200,80,0.3) 0%, transparent 70%),
+    radial-gradient(ellipse at center, #2a9e3a 0%, #1f8830 25%, #177224 50%, #0f5a1a 75%, #0a4012 100%);
   box-shadow:
     inset 0 0 120px rgba(0,0,0,0.3),
     inset 0 0 40px rgba(0,0,0,0.15),
@@ -110,6 +110,27 @@ body {
   box-shadow: 0 0 16px rgba(255,215,0,0.3), 0 2px 10px rgba(0,0,0,0.3);
   border-color: rgba(255,215,0,0.4);
 }
+
+/* ── Turn arrow indicator ── */
+.turn-arrow {
+  position: absolute; width: 0; height: 0; z-index: 4;
+  border: 6px solid transparent;
+  opacity: 0.8;
+  animation: pulse-arrow 1.2s ease-in-out infinite;
+  pointer-events: none;
+}
+@keyframes pulse-arrow {
+  0%, 100% { opacity: 0.5; }
+  50% { opacity: 1; }
+}
+/* South: arrow above label pointing up */
+.turn-arrow.south { border-bottom: 8px solid #ffd700; border-top: 0; left: 50%; transform: translateX(-50%); bottom: 100%; margin-bottom: 4px; }
+/* North: arrow below label pointing down */
+.turn-arrow.north { border-top: 8px solid #ffd700; border-bottom: 0; left: 50%; transform: translateX(-50%); top: 100%; margin-top: 4px; }
+/* West: arrow right of label pointing right */
+.turn-arrow.west { border-left: 8px solid #ffd700; border-right: 0; top: 50%; transform: translateY(-50%); left: 100%; margin-left: 4px; }
+/* East: arrow left of label pointing left */
+.turn-arrow.east { border-right: 8px solid #ffd700; border-left: 0; top: 50%; transform: translateY(-50%); right: 100%; margin-right: 4px; }
 .player-label .dealer-chip {
   display: inline-block;
   background: linear-gradient(135deg, #ffe44d, #ffc400, #e6a800);
@@ -146,13 +167,13 @@ body {
 .card-front .card-br .card-suit-sm { font-size: 14px; margin-top: -1px; }
 .card-front .card-center { position: absolute; top: 50%; left: 50%; transform: translate(-50%,-50%); font-size: 38px; line-height: 1; opacity: 0.85; filter: drop-shadow(0 1px 1px rgba(0,0,0,0.1)); }
 .card-back {
-  background: linear-gradient(145deg, #1e4080, #152d5e, #0f2248);
-  border: 2px solid #3060a8;
-  box-shadow: 0 4px 12px rgba(0,0,0,0.5), 0 1px 3px rgba(0,0,0,0.3), inset 0 1px 0 rgba(255,255,255,0.1);
+  background: linear-gradient(145deg, #2e5cb8, #1e48a0, #163888);
+  border: 2px solid #4080d0;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.5), 0 1px 3px rgba(0,0,0,0.3), inset 0 1px 0 rgba(255,255,255,0.15);
   overflow: hidden;
 }
-.card-back::before { content: ''; position: absolute; inset: 5px; border: 1.5px solid rgba(255,215,0,0.15); border-radius: 5px; background: repeating-linear-gradient(45deg, transparent, transparent 4px, rgba(255,255,255,0.03) 4px, rgba(255,255,255,0.03) 8px); }
-.card-back::after { content: ''; position: absolute; top: 50%; left: 50%; transform: translate(-50%,-50%); width: 30px; height: 30px; border-radius: 50%; background: radial-gradient(circle, rgba(255,215,0,0.25), rgba(255,215,0,0.08) 50%, transparent 70%); border: 1px solid rgba(255,215,0,0.2); box-shadow: 0 0 8px rgba(255,215,0,0.1); }
+.card-back::before { content: ''; position: absolute; inset: 5px; border: 1.5px solid rgba(255,215,0,0.2); border-radius: 5px; background: repeating-linear-gradient(45deg, transparent, transparent 4px, rgba(255,255,255,0.05) 4px, rgba(255,255,255,0.05) 8px); }
+.card-back::after { content: ''; position: absolute; top: 50%; left: 50%; transform: translate(-50%,-50%); width: 30px; height: 30px; border-radius: 50%; background: radial-gradient(circle, rgba(255,215,0,0.3), rgba(255,215,0,0.1) 50%, transparent 70%); border: 1px solid rgba(255,215,0,0.25); box-shadow: 0 0 10px rgba(255,215,0,0.15); }
 .card.playable { cursor: pointer; border: 2px solid rgba(255,215,0,0.6); box-shadow: 0 4px 12px rgba(0,0,0,0.45), 0 0 10px rgba(255,215,0,0.15); }
 .card.playable:hover { transform: translateY(-16px) scale(1.06); box-shadow: 0 12px 30px rgba(0,0,0,0.5), 0 0 24px rgba(255,215,0,0.3); z-index: 10; border-color: #ffd700; }
 .opp-hand { position: relative; display: flex; align-items: center; justify-content: center; }
@@ -182,7 +203,7 @@ body {
 .trick-card.fly-to-east  { right: -180px !important; top: 50% !important; opacity: 0; transform: translateY(-50%) scale(0.5) !important; transition: all 0.5s cubic-bezier(0.4,0,0.2,1) !important; }
 
 /* ── BIDDING ── */
-#bid-panel { position: absolute; bottom: 200px; left: 50%; transform: translateX(-50%); display: none; flex-direction: column; align-items: center; gap: 8px; z-index: 30; }
+#bid-panel { position: absolute; bottom: 240px; left: 50%; transform: translateX(-50%); display: none; flex-direction: column; align-items: center; gap: 8px; z-index: 30; }
 #bid-panel.show { display: flex; }
 #bid-prompt { font-size: 14px; color: #ffd700; font-weight: 700; text-shadow: 0 2px 6px rgba(0,0,0,0.7); }
 #bid-buttons { display: flex; gap: 8px; }
@@ -319,22 +340,22 @@ body {
   .ctrl-btn { padding: 3px 7px; font-size: 8px; border-radius: 6px; }
   #log-counter { font-size: 7px; padding: 2px 3px; }
 
-  /* Player areas — push south cards down, north below header */
-  .player-area.south { bottom: 4px; }
+  /* Player areas — raise south so browser bar doesn't cover name */
+  .player-area.south { bottom: 24px; }
   .player-area.north { top: 70px; }
   .player-area.west  { left: 10px; top: 38%; gap: 4px; }
   .player-area.east  { right: 10px; top: 38%; gap: 4px; }
   .player-label { font-size: 9px; padding: 2px 6px; border-radius: 7px; }
   .player-label .dealer-chip { font-size: 7px; padding: 1px 4px; border-radius: 4px; margin-left: 2px; }
 
-  /* Cards — smaller on mobile */
-  .card { width: 54px; height: 78px; border-radius: 6px; font-size: 13px; }
-  .card-front .card-tl .card-rank { font-size: 11px; }
-  .card-front .card-tl .card-suit-sm { font-size: 9px; }
-  .card-front .card-br .card-rank { font-size: 11px; }
-  .card-front .card-br .card-suit-sm { font-size: 9px; }
-  .card-front .card-center { font-size: 22px; }
-  .card.opp-card { width: 38px; height: 54px; }
+  /* Cards — bigger on mobile */
+  .card { width: 62px; height: 90px; border-radius: 7px; font-size: 14px; }
+  .card-front .card-tl .card-rank { font-size: 12px; }
+  .card-front .card-tl .card-suit-sm { font-size: 10px; }
+  .card-front .card-br .card-rank { font-size: 12px; }
+  .card-front .card-br .card-suit-sm { font-size: 10px; }
+  .card-front .card-center { font-size: 26px; }
+  .card.opp-card { width: 44px; height: 62px; }
   .hand.south { gap: 0px; }
   .card.playable:hover { transform: translateY(-8px) scale(1.03); }
 
@@ -342,13 +363,13 @@ body {
   #trick-area { width: 180px; height: 160px; }
 
   /* Bid panel */
-  #bid-panel { bottom: 110px; }
+  #bid-panel { bottom: 150px; }
   #bid-prompt { font-size: 11px; }
   .bid-btn { padding: 7px 12px; font-size: 11px; min-width: 36px; border-radius: 8px; }
 
   /* Bid bubbles */
   .bid-bubble { font-size: 9px; padding: 2px 8px; }
-  .bid-bubble.south { bottom: 100px; }
+  .bid-bubble.south { bottom: 140px; }
   .bid-bubble.north { top: 130px; }
   .bid-bubble.west  { left: 90px; }
   .bid-bubble.east  { right: 90px; }
@@ -370,7 +391,7 @@ body {
   .host-only { display: none !important; }
 
   /* Log panel — above cards on mobile */
-  #log-panel { right: 8px; width: 130px; max-height: 80px; padding: 3px 6px; font-size: 8px; line-height: 1.3; border-radius: 8px; bottom: 110px; }
+  #log-panel { right: 8px; width: 130px; max-height: 80px; padding: 3px 6px; font-size: 8px; line-height: 1.3; border-radius: 8px; bottom: 150px; }
 
   /* Join panel */
   #join-panel { padding: 16px 20px; }
@@ -391,19 +412,20 @@ body {
   #trump-indicator { top: 40px; padding: 3px 6px; font-size: 9px; }
   #trump-indicator .trump-icon { font-size: 14px; }
   #trump-indicator .bidder-info { font-size: 7px; }
-  .card { width: 46px; height: 66px; border-radius: 5px; }
-  .card-front .card-tl .card-rank { font-size: 10px; }
-  .card-front .card-tl .card-suit-sm { font-size: 8px; }
-  .card-front .card-br .card-rank { font-size: 10px; }
-  .card-front .card-br .card-suit-sm { font-size: 8px; }
-  .card-front .card-center { font-size: 18px; }
-  .card.opp-card { width: 34px; height: 48px; }
-  .player-area.south { bottom: 2px; }
+  .card { width: 52px; height: 75px; border-radius: 6px; }
+  .card-front .card-tl .card-rank { font-size: 11px; }
+  .card-front .card-tl .card-suit-sm { font-size: 9px; }
+  .card-front .card-br .card-rank { font-size: 11px; }
+  .card-front .card-br .card-suit-sm { font-size: 9px; }
+  .card-front .card-center { font-size: 20px; }
+  .card.opp-card { width: 38px; height: 54px; }
+  .player-area.south { bottom: 20px; }
   .player-area.west { left: 6px; }
   .player-area.east { right: 6px; }
   #trick-area { width: 150px; height: 140px; }
   .bid-btn { padding: 6px 10px; font-size: 10px; }
-  #log-panel { bottom: 100px; right: 6px; width: 110px; max-height: 60px; font-size: 7px; padding: 2px 5px; }
+  #bid-panel { bottom: 130px; }
+  #log-panel { bottom: 130px; right: 6px; width: 110px; max-height: 60px; font-size: 7px; padding: 2px 5px; }
 }
 </style>
 </head>
@@ -900,10 +922,18 @@ function updateLabels() {
 }
 
 function setActiveTurn(absSeat) {
-  document.querySelectorAll('.player-label').forEach(el => el.classList.remove('active-turn'));
+  document.querySelectorAll('.player-label').forEach(el => {
+    el.classList.remove('active-turn');
+    const old = el.querySelector('.turn-arrow');
+    if (old) old.remove();
+  });
   if (absSeat !== null && absSeat >= 0) {
     const pos = viewPos(absSeat);
-    document.getElementById(labelId(pos)).classList.add('active-turn');
+    const el = document.getElementById(labelId(pos));
+    el.classList.add('active-turn');
+    const arrow = document.createElement('span');
+    arrow.className = `turn-arrow ${pos}`;
+    el.appendChild(arrow);
   }
 }
 
