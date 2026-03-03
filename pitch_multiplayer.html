@@ -78,7 +78,7 @@ body {
 }
 
 #trump-indicator {
-  position: absolute; top: 28px; left: 28px;
+  position: absolute; top: 28px; left: 70px;
   display: flex; align-items: center; gap: 6px;
   background: none; padding: 0; border: none;
   font-weight: 700; color: #ffd700; font-size: 16px;
@@ -88,7 +88,7 @@ body {
 #trump-indicator .trump-row { display: flex; align-items: center; gap: 4px; }
 #trump-indicator .trump-label { display: none; }
 #trump-indicator .trump-icon { font-size: 36px; filter: drop-shadow(0 0 8px rgba(255,215,0,0.5)) drop-shadow(0 2px 6px rgba(0,0,0,0.6)); }
-#trump-indicator .bidder-info { font-size: 12px; color: #e0e0e0; font-weight: 600; text-shadow: 0 1px 6px rgba(0,0,0,0.8); }
+#trump-indicator .bidder-info { font-size: 16px; color: #e0e0e0; font-weight: 800; text-shadow: 0 1px 6px rgba(0,0,0,0.8); }
 #trump-indicator.hidden { display: none; }
 
 /* ── PLAYER AREAS ── */
@@ -326,10 +326,10 @@ body {
   .score-val { font-size: 13px; min-width: 16px; }
   #game-info { font-size: 7px; }
 
-  /* Trump indicator — below scoreboard, no box */
-  #trump-indicator { top: 68px; left: 12px; font-size: 10px; gap: 3px; }
+  /* Trump indicator — below scoreboard, aligned with West */
+  #trump-indicator { top: 68px; left: 16px; font-size: 10px; gap: 3px; }
   #trump-indicator .trump-icon { font-size: 20px; }
-  #trump-indicator .bidder-info { font-size: 8px; }
+  #trump-indicator .bidder-info { font-size: 11px; font-weight: 800; }
 
   /* Host indicator */
   #host-indicator { top: 68px; right: 12px; font-size: 8px; }
@@ -411,7 +411,7 @@ body {
   .score-val { font-size: 12px; }
   #trump-indicator { top: 60px; font-size: 9px; }
   #trump-indicator .trump-icon { font-size: 16px; }
-  #trump-indicator .bidder-info { font-size: 7px; }
+  #trump-indicator .bidder-info { font-size: 10px; font-weight: 800; }
   .card { width: 58px; height: 84px; border-radius: 6px; }
   .card-front .card-tl .card-rank { font-size: 12px; }
   .card-front .card-tl .card-suit-sm { font-size: 10px; }
