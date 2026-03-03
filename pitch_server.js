@@ -531,28 +531,38 @@ wss.on('connection', (ws) => {
 
       case 'randomize-teams': {
         if (room.phase !== 'lobby') return;
-        // Physically shuffle players across seats so teammates sit across (seats 0,2 = team, 1,3 = team)
-        // Keep teams fixed as [0,1,0,1] — shuffle player assignments instead
+        // Keep teams fixed as [0,1,0,1] (seats 0,2 = team, 1,3 = team)
+        // Host stays in their seat — shuffle everyone else among the remaining seats
         room.teams = [0,1,0,1];
-        const names = room.players.map(p => p ? { name: p.name, ws: p.ws, connected: p.connected } : null);
-        const filled = names.filter(n => n !== null);
-        shuffle(filled);
+        const hs = room.hostSeat;
+        const hostData = room.players[hs] ? { name: room.players[hs].name, ws: room.players[hs].ws, connected: room.players[hs].connected } : null;
+        // Collect non-host players
+        const others = [];
+        const otherSeats = [];
         for (let i = 0; i < 4; i++) {
-          if (i < filled.length) {
-            room.players[i] = { ws: filled[i].ws, name: filled[i].name, seat: i, connected: filled[i].connected };
+          if (i === hs) continue;
+          if (room.players[i]) others.push({ name: room.players[i].name, ws: room.players[i].ws, connected: room.players[i].connected });
+          otherSeats.push(i);
+        }
+        shuffle(others);
+        // Place host back in their seat
+        if (hostData) room.players[hs] = { ws: hostData.ws, name: hostData.name, seat: hs, connected: hostData.connected };
+        // Place shuffled others in remaining seats
+        for (let i = 0; i < otherSeats.length; i++) {
+          const s = otherSeats[i];
+          if (i < others.length) {
+            room.players[s] = { ws: others[i].ws, name: others[i].name, seat: s, connected: others[i].connected };
           } else {
-            room.players[i] = null;
+            room.players[s] = null;
           }
         }
-        // Update hostSeat to first connected player
-        room.hostSeat = room.players.findIndex(p => p && p.connected);
         // Tell each client their new seat
         for (let i = 0; i < 4; i++) {
           if (room.players[i] && room.players[i].ws && room.players[i].ws.readyState === 1) {
             room.players[i].ws.send(JSON.stringify({ type: 'joined', seat: i, name: room.players[i].name }));
           }
         }
-        console.log(`  → Teams shuffled: ${room.players.map((p,i) => p ? `Seat${i+1}=${p.name}(T${room.teams[i]})` : 'empty').join(', ')}`);
+        console.log(`  → Teams shuffled (host fixed Seat${hs+1}): ${room.players.map((p,i) => p ? `Seat${i+1}=${p.name}(T${room.teams[i]})` : 'empty').join(', ')}`);
         broadcastLobby();
         break;
       }
