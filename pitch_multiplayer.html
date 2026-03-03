@@ -548,9 +548,12 @@ function handleMessage(msg) {
     case 'joined':
       mySeat = msg.seat;
       myName = msg.name;
-      // Hide join panel, show table
+      // Hide join panel
       document.getElementById('join-panel').classList.add('hidden');
-      document.getElementById('lobby-status').classList.remove('hidden');
+      // Only show lobby status if not already in a game
+      if (!inGame) {
+        document.getElementById('lobby-status').classList.remove('hidden');
+      }
       break;
 
     case 'lobby':
@@ -602,11 +605,9 @@ function handleMessage(msg) {
 
     case 'bid-turn':
       setActiveTurn(msg.seat);
-      if (msg.seat !== mySeat) showWaiting(`Waiting for ${msg.playerName} to bid...`);
       break;
 
     case 'your-bid':
-      hideWaiting();
       showBidPanel(msg.legalBids, msg.currentBid);
       break;
 
@@ -632,11 +633,9 @@ function handleMessage(msg) {
     case 'play-turn':
       currentTrick = (msg.currentTrick || []).map(x => ({player: x.player, card: toCard(x.card)}));
       setActiveTurn(msg.seat);
-      if (msg.seat !== mySeat) showWaiting(`Waiting for ${msg.playerName}...`);
       break;
 
     case 'your-turn':
-      hideWaiting();
       const legal = msg.legalPlays.map(toCard);
       renderMyHand(legal);
       break;
