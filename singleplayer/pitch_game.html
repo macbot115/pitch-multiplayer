@@ -14,8 +14,12 @@ body {
   background: #0a0a14;
   color: #e0e0e0;
   overflow: hidden;
+  width: 100vw;
   height: 100vh;
   user-select: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   text-rendering: optimizeLegibility;
@@ -23,9 +27,11 @@ body {
 
 #table {
   position: relative;
-  width: 100vw;
-  height: 100vh;
+  width: 1200px;
+  height: 800px;
   overflow: hidden;
+  transform-origin: center center;
+  flex-shrink: 0;
   /* Rich wood border frame */
   background:
     /* Wood grain outer frame */
@@ -418,7 +424,7 @@ body {
   width: 190px;
   min-width: 140px;
   max-width: 350px;
-  max-height: calc(100vh - 180px);
+  max-height: 620px;
   min-height: 60px;
   overflow-y: auto;
   overflow-x: hidden;
@@ -751,12 +757,11 @@ body {
 // ══════════════════════════════════════════
 (function() {
   const BASE_W = 1200, BASE_H = 800;
+  const table = document.getElementById('table');
   function rescale() {
     const w = window.innerWidth, h = window.innerHeight;
     const scale = Math.min(w / BASE_W, h / BASE_H);
-    // Clamp between 0.5x and 1.5x so it doesn't get extreme
-    const clamped = Math.max(0.5, Math.min(1.5, scale));
-    document.body.style.zoom = clamped;
+    table.style.transform = `scale(${scale})`;
   }
   window.addEventListener('resize', rescale);
   rescale();
