@@ -1,0 +1,2232 @@
+<!DOCTYPE html>
+<!-- saved from url=(0227)file:///Users/nickhayes/Library/Application%20Support/Claude/local-agent-mode-sessions/970eef5c-0780-4249-82ae-636b3b8f0b9f/acd339f1-d568-4957-96ee-34d0ab79f113/local_3a6e7161-1192-4cb2-ae1f-36a0f77029f4/outputs/pitch_game.html -->
+<html lang="en"><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Pitch - Hi-Lo-Jack Solver (Realistic)</title>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+html { touch-action: manipulation; }
+
+/* ── REALISTIC FELT NOISE via SVG data URI ── */
+body {
+  font-family: -apple-system, 'SF Pro Text', 'Helvetica Neue', system-ui, sans-serif;
+  background: #0a0a14;
+  color: #e0e0e0;
+  overflow: hidden;
+  height: 100vh;
+  user-select: none;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+}
+
+#table {
+  position: relative;
+  width: 100vw;
+  height: 100vh;
+  overflow: hidden;
+  /* Rich wood border frame */
+  background:
+    /* Wood grain outer frame */
+    linear-gradient(180deg, #5a3a1a 0%, #7a4e28 3%, #5a3a1a 6%, #3d2510 8%),
+    #3d2510;
+}
+
+/* The felt playing surface (inset from the wood frame) */
+#table::before {
+  content: '';
+  position: absolute;
+  inset: 22px;
+  border-radius: 40px;
+  /* Layered felt texture: base green + radial light + noise overlay */
+  background:
+    /* Overhead lamp spotlight */
+    radial-gradient(ellipse 55% 45% at 50% 42%, rgba(100,200,80,0.3) 0%, transparent 70%),
+    /* Base felt gradient */
+    radial-gradient(ellipse at center, #2a9e3a 0%, #1f8830 25%, #177224 50%, #0f5a1a 75%, #0a4012 100%);
+  /* Felt fiber texture via subtle box-shadow inset */
+  box-shadow:
+    inset 0 0 120px rgba(0,0,0,0.3),
+    inset 0 0 40px rgba(0,0,0,0.15),
+    0 0 0 3px #2a1a08,
+    0 0 0 5px #4a3018,
+    0 0 0 6px #2a1a08;
+  pointer-events: none;
+  z-index: 0;
+}
+
+/* Felt noise texture overlay */
+#table::after {
+  content: '';
+  position: absolute;
+  inset: 22px;
+  border-radius: 40px;
+  pointer-events: none;
+  z-index: 1;
+  opacity: 0.12;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  background-size: 256px 256px;
+  mix-blend-mode: overlay;
+}
+
+/* ── SCORES ── */
+#scoreboard {
+  position: absolute;
+  top: 28px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  gap: 24px;
+  background: rgba(10,8,5,0.75);
+  padding: 8px 24px;
+  border-radius: 20px;
+  font-size: 13px;
+  z-index: 20;
+  backdrop-filter: blur(12px);
+  border: 1px solid rgba(255,215,0,0.15);
+  box-shadow: 0 4px 20px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.05);
+}
+.score-team { display: flex; align-items: center; gap: 6px; }
+.score-label { opacity: 1; font-size: 12px; text-transform: uppercase; letter-spacing: 1px; font-weight: 700; }
+.score-val { font-weight: 700; font-size: 18px; min-width: 24px; text-align: center; text-shadow: 0 0 8px currentColor; }
+.team0-color { color: #6ec6ff; }
+.team1-color { color: #ff6b6b; }
+#game-info { font-size: 10px; opacity: 0.6; display: flex; align-items: center; gap: 6px; }
+#trump-indicator {
+  position: absolute;
+  top: 28px;
+  left: 70px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: none;
+  padding: 0;
+  border: none;
+  font-weight: 700;
+  color: #ffd700;
+  font-size: 16px;
+  z-index: 20;
+  pointer-events: none;
+  text-shadow: 0 2px 8px rgba(0,0,0,0.7), 0 0 20px rgba(0,0,0,0.4);
+}
+#trump-indicator .trump-row { display: flex; align-items: center; gap: 4px; }
+#trump-indicator .trump-label { display: none; }
+#trump-indicator .trump-icon { font-size: 36px; filter: drop-shadow(0 0 8px rgba(255,215,0,0.5)) drop-shadow(0 2px 6px rgba(0,0,0,0.6)); }
+#trump-indicator .bidder-info { font-size: 16px; color: #e0e0e0; font-weight: 800; text-shadow: 0 1px 6px rgba(0,0,0,0.8); }
+#trump-indicator.hidden { display: none; }
+
+/* ── PLAYER AREAS ── */
+.player-area {
+  position: absolute;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  z-index: 3;
+}
+.player-area.south { bottom: 28px; left: 50%; transform: translateX(-50%); }
+.player-area.north { top: 80px; left: 50%; transform: translateX(-50%); }
+.player-area.west  { left: 70px; top: 34%; transform: translateY(-50%); flex-direction: row-reverse; align-items: center; gap: 16px; }
+.player-area.east  { right: 70px; top: 34%; transform: translateY(-50%); flex-direction: row; align-items: center; gap: 16px; }
+
+.player-label {
+  font-size: 13px;
+  font-weight: 700;
+  padding: 5px 16px;
+  border-radius: 12px;
+  background: rgba(10,8,5,0.75);
+  white-space: nowrap;
+  backdrop-filter: blur(8px);
+  z-index: 5;
+  position: relative;
+  border: 1px solid rgba(255,255,255,0.1);
+  box-shadow: 0 2px 10px rgba(0,0,0,0.3);
+  text-shadow: 0 1px 2px rgba(0,0,0,0.5);
+}
+.player-label.active-turn {
+  background: rgba(255,215,0,0.25);
+  color: #ffd700;
+  box-shadow: 0 0 16px rgba(255,215,0,0.3), 0 2px 10px rgba(0,0,0,0.3);
+  border-color: rgba(255,215,0,0.4);
+}
+.player-label .dealer-chip {
+  display: inline-block;
+  background: linear-gradient(135deg, #ffe44d, #ffc400, #e6a800);
+  color: #000;
+  font-size: 11px;
+  font-weight: 800;
+  padding: 2px 8px;
+  border-radius: 8px;
+  margin-left: 6px;
+  box-shadow: 0 0 10px rgba(255,215,0,0.5), 0 2px 4px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.4);
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+}
+
+/* ── CARDS ── */
+.hand { display: flex; justify-content: center; }
+.hand.south { gap: 2px; }
+
+.card {
+  width: 88px;
+  height: 126px;
+  border-radius: 10px;
+  display: flex;
+  flex-direction: column;
+  font-size: 20px;
+  font-weight: 700;
+  cursor: default;
+  transition: transform 0.2s cubic-bezier(0.25, 0.46, 0.45, 0.94), box-shadow 0.2s;
+  position: relative;
+  flex-shrink: 0;
+  font-family: 'Georgia', 'Times New Roman', serif;
+}
+.card-front {
+  background: linear-gradient(160deg, #ffffff 0%, #fafaf5 30%, #f5f5ef 60%, #eeeee6 100%);
+  border: 1px solid #b8b8b0;
+  box-shadow:
+    0 4px 12px rgba(0,0,0,0.45),
+    0 1px 3px rgba(0,0,0,0.25),
+    inset 0 0 0 1px rgba(255,255,255,0.7),
+    inset 0 1px 0 rgba(255,255,255,0.9);
+  padding: 4px 6px;
+  justify-content: space-between;
+}
+.card-front.red { color: #b71c1c; }
+.card-front.black { color: #1a1a1a; }
+
+/* Top-left corner: rank + suit */
+.card-front .card-tl {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  line-height: 1;
+  position: absolute;
+  top: 4px;
+  left: 5px;
+}
+.card-front .card-tl .card-rank { font-size: 17px; font-weight: 700; }
+.card-front .card-tl .card-suit-sm { font-size: 14px; margin-top: -1px; }
+
+/* Bottom-right corner (rotated) */
+.card-front .card-br {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  line-height: 1;
+  position: absolute;
+  bottom: 4px;
+  right: 5px;
+  transform: rotate(180deg);
+}
+.card-front .card-br .card-rank { font-size: 17px; font-weight: 700; }
+.card-front .card-br .card-suit-sm { font-size: 14px; margin-top: -1px; }
+
+/* Center suit pip */
+.card-front .card-center {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  font-size: 38px;
+  line-height: 1;
+  opacity: 0.85;
+  filter: drop-shadow(0 1px 1px rgba(0,0,0,0.1));
+}
+
+/* Card back — rich velvet with ornate pattern */
+.card-back {
+  background: linear-gradient(145deg, #4a8ae6, #3570d0, #2a5cb8);
+  border: 2px solid #6aa0f0;
+  box-shadow:
+    0 4px 12px rgba(0,0,0,0.5),
+    0 1px 3px rgba(0,0,0,0.3),
+    inset 0 1px 0 rgba(255,255,255,0.1);
+  overflow: hidden;
+}
+.card-back::before {
+  content: '';
+  position: absolute;
+  inset: 5px;
+  border: 1.5px solid rgba(255,215,0,0.2);
+  border-radius: 5px;
+  background: repeating-linear-gradient(
+    45deg,
+    transparent,
+    transparent 4px,
+    rgba(255,255,255,0.06) 4px,
+    rgba(255,255,255,0.06) 8px
+  );
+}
+.card-back::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(255,215,0,0.35), rgba(255,215,0,0.12) 50%, transparent 70%);
+  border: 1px solid rgba(255,215,0,0.3);
+  box-shadow: 0 0 12px rgba(255,215,0,0.2);
+}
+
+.card.playable {
+  cursor: pointer;
+  border: 2px solid rgba(255,215,0,0.6);
+  box-shadow: 0 4px 12px rgba(0,0,0,0.45), 0 0 10px rgba(255,215,0,0.15);
+}
+.card.playable:hover {
+  transform: translateY(-16px) scale(1.06);
+  box-shadow: 0 12px 30px rgba(0,0,0,0.5), 0 0 24px rgba(255,215,0,0.3);
+  z-index: 10;
+  border-color: #ffd700;
+}
+
+/* Single card-back for opponents with count badge */
+.opp-hand {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.opp-hand .card-count {
+  position: absolute;
+  bottom: -2px;
+  right: -6px;
+  background: rgba(10,8,5,0.85);
+  color: #fff;
+  font-size: 11px;
+  font-weight: 700;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid rgba(255,255,255,0.25);
+  box-shadow: 0 2px 6px rgba(0,0,0,0.4);
+}
+.card.opp-card {
+  width: 64px;
+  height: 90px;
+}
+/* Open opponent hands (show all cards mode) */
+.opp-hand-open { display: flex; gap: 1px; }
+.opp-hand-open .card.small { width: 62px; height: 88px; font-size: 16px; }
+.opp-hand-open .card.small .card-tl .card-rank { font-size: 14px; }
+.opp-hand-open .card.small .card-tl .card-suit-sm { font-size: 11px; }
+.opp-hand-open .card.small .card-center { font-size: 28px; }
+
+/* East/West card rotation — face toward the middle */
+.player-area.west .opp-hand,
+.player-area.east .opp-hand { flex-direction: column; align-items: center; }
+.player-area.west .opp-hand .rotated-card { transform: rotate(90deg); margin: -16px 0; }
+.player-area.west .opp-hand .rotated-card .card-count { transform: rotate(-90deg); }
+.player-area.east .opp-hand .rotated-card { transform: rotate(-90deg); margin: -16px 0; }
+.player-area.east .opp-hand .rotated-card .card-count { transform: rotate(90deg); }
+.player-area.west .opp-hand-open,
+.player-area.east .opp-hand-open { flex-direction: column; align-items: center; gap: 0; }
+
+/* ── TRICK AREA ── */
+#trick-area {
+  position: absolute;
+  top: 48%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 300px;
+  height: 260px;
+  z-index: 3;
+}
+.trick-card { position: absolute; opacity: 1; transition: all 0.35s cubic-bezier(0.25, 0.46, 0.45, 0.94); }
+.trick-card.pos-south { bottom: 0; left: 50%; transform: translateX(-50%); }
+.trick-card.pos-north { top: 0; left: 50%; transform: translateX(-50%); }
+.trick-card.pos-west  { left: 0; top: 50%; transform: translateY(-50%); }
+.trick-card.pos-east  { right: 0; top: 50%; transform: translateY(-50%); }
+/* Card enter animations - start offset from player position */
+.trick-card.card-enter-south { opacity: 0; bottom: -60px; }
+.trick-card.card-enter-north { opacity: 0; top: -60px; }
+.trick-card.card-enter-west  { opacity: 0; left: -60px; }
+.trick-card.card-enter-east  { opacity: 0; right: -60px; }
+.trick-card .winner-glow {
+  position: absolute; inset: -4px;
+  border: 3px solid #ffd700; border-radius: 12px;
+  box-shadow: 0 0 16px rgba(255,215,0,0.5), 0 0 4px rgba(255,215,0,0.3); display: none;
+}
+/* Card fly-to-winner animation */
+.trick-card.fly-to-south { bottom: -180px !important; left: 50% !important; opacity: 0; transform: translateX(-50%) scale(0.5) !important; transition: all 0.5s cubic-bezier(0.4, 0, 0.2, 1) !important; }
+.trick-card.fly-to-north { top: -180px !important; left: 50% !important; opacity: 0; transform: translateX(-50%) scale(0.5) !important; transition: all 0.5s cubic-bezier(0.4, 0, 0.2, 1) !important; }
+.trick-card.fly-to-west  { left: -180px !important; top: 50% !important; opacity: 0; transform: translateY(-50%) scale(0.5) !important; transition: all 0.5s cubic-bezier(0.4, 0, 0.2, 1) !important; }
+.trick-card.fly-to-east  { right: -180px !important; top: 50% !important; opacity: 0; transform: translateY(-50%) scale(0.5) !important; transition: all 0.5s cubic-bezier(0.4, 0, 0.2, 1) !important; }
+
+/* ── BIDDING ── */
+#bid-panel {
+  position: absolute;
+  bottom: 200px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: none;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  z-index: 30;
+}
+#bid-panel.show { display: flex; }
+#bid-prompt { font-size: 14px; color: #ffd700; font-weight: 700; text-shadow: 0 2px 6px rgba(0,0,0,0.7); }
+#bid-buttons { display: flex; gap: 8px; }
+.bid-btn {
+  padding: 10px 20px; border: none; border-radius: 12px;
+  font-size: 14px; font-weight: 700; cursor: pointer;
+  transition: transform 0.1s, box-shadow 0.15s; min-width: 50px;
+  box-shadow: 0 3px 10px rgba(0,0,0,0.3);
+}
+.bid-btn:hover { transform: scale(1.08); box-shadow: 0 5px 16px rgba(0,0,0,0.4); }
+.bid-btn:active { transform: scale(0.96); }
+.bid-btn.pass { background: linear-gradient(135deg, #546e7a, #37474f); color: #fff; border: 1px solid rgba(255,255,255,0.1); }
+.bid-btn.bid-val { background: linear-gradient(135deg, #ffc107, #f9a825, #f57f17); color: #000; border: 1px solid rgba(255,255,255,0.2); }
+.bid-btn:disabled { opacity: 0.3; cursor: not-allowed; transform: none; box-shadow: none; }
+
+/* ── BID BUBBLES ── */
+.bid-bubble {
+  position: absolute;
+  background: rgba(10,8,5,0.8); color: #fff;
+  padding: 5px 14px; border-radius: 14px;
+  font-size: 13px; font-weight: 600;
+  white-space: nowrap; z-index: 15;
+  backdrop-filter: blur(8px);
+  animation: fadeInBubble 0.3s ease;
+  pointer-events: none;
+  border: 1px solid rgba(255,255,255,0.1);
+  box-shadow: 0 3px 12px rgba(0,0,0,0.4);
+}
+.bid-bubble.south { bottom: 170px; left: 50%; transform: translateX(-50%); }
+.bid-bubble.north { top: 225px; left: 50%; transform: translateX(-50%); }
+.bid-bubble.west  { left: 210px; top: 34%; transform: translateY(-50%); }
+.bid-bubble.east  { right: 210px; top: 34%; transform: translateY(-50%); }
+@keyframes fadeInBubble {
+  from { opacity: 0; transform: translateX(-50%) scale(0.8); }
+  to   { opacity: 1; transform: translateX(-50%) scale(1); }
+}
+
+/* ── SOLVER PANEL — narrow vertical left strip ── */
+#solver-panel {
+  position: absolute;
+  bottom: 28px;
+  left: 28px;
+  width: 190px;
+  min-width: 140px;
+  max-width: 350px;
+  max-height: calc(100vh - 180px);
+  min-height: 60px;
+  overflow-y: auto;
+  overflow-x: hidden;
+  background: rgba(10,8,5,0.85);
+  border: 1px solid rgba(255,215,0,0.2);
+  border-radius: 12px;
+  padding: 5px 6px;
+  z-index: 25;
+  backdrop-filter: blur(12px);
+  font-size: 10px;
+  line-height: 1.3;
+  display: none;
+  cursor: default;
+  resize: both;
+  box-shadow: 0 4px 20px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.04);
+}
+#solver-panel.show { display: block; }
+#solver-panel .drag-handle {
+  cursor: grab; padding: 2px 0 4px; margin-bottom: 2px;
+  border-bottom: 1px solid rgba(255,255,255,0.08);
+  display: flex; align-items: center; justify-content: space-between;
+  font-size: 10px; color: rgba(255,255,255,0.3); user-select: none;
+}
+#solver-panel .drag-handle:active { cursor: grabbing; }
+#solver-panel .drag-handle .grip { letter-spacing: 1px; }
+#solver-panel .sim-sel { background: rgba(255,255,255,0.1); color: #ffd700; border: none; border-radius: 4px; font-size: 10px; padding: 1px 3px; cursor: pointer; }
+#solver-panel::-webkit-scrollbar { width: 3px; }
+#solver-panel::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.2); border-radius: 2px; }
+#solver-panel::-webkit-resizer { background: linear-gradient(135deg, transparent 60%, rgba(255,215,0,0.3) 60%, rgba(255,215,0,0.3) 75%, transparent 75%, transparent 85%, rgba(255,215,0,0.3) 85%); }
+/* Compact mode when Show Cards is on */
+#solver-panel.compact { width: 155px; min-width: 120px; font-size: 9px; padding: 4px 5px; line-height: 1.3; }
+#solver-panel.compact .drag-handle { font-size: 8px; padding: 1px 0 2px; }
+#solver-panel.compact .sim-sel { font-size: 8px; padding: 1px 2px; }
+#solver-panel.compact h3 { font-size: 9px; margin-bottom: 2px; }
+#solver-panel.compact .solver-suit-block { margin-bottom: 3px; padding: 2px 3px; }
+#solver-panel.compact .solver-suit-hdr { font-size: 10px; }
+#solver-panel.compact .solver-suit-hdr .si { font-size: 11px; }
+#solver-panel.compact .solver-suit-hdr .tc { font-size: 7px; }
+#solver-panel.compact .solver-bid-line { font-size: 8px; padding: 0 1px; }
+#solver-panel.compact .solver-bid-line .bl { min-width: 20px; }
+#solver-panel.compact .solver-bid-line .bp { min-width: 22px; }
+#solver-panel.compact .solver-bid-line .be { min-width: 30px; }
+#solver-panel.compact .solver-rec { font-size: 9px; padding: 2px 4px; }
+#solver-panel.compact .solver-no-trump { font-size: 8px; }
+#solver-panel.compact .play-row { font-size: 9px; padding: 1px 2px; }
+#solver-panel.compact .play-row .cm { font-size: 10px; }
+#solver-panel.compact .play-ev-bar { width: 30px; height: 3px; }
+#solver-panel h3 {
+  color: #ffd700; font-size: 11px; margin-bottom: 4px;
+  display: flex; align-items: center; gap: 4px;
+}
+#solver-panel h3 .spinner {
+  display: inline-block; width: 10px; height: 10px;
+  border: 2px solid rgba(255,215,0,0.3); border-top-color: #ffd700;
+  border-radius: 50%; animation: spin 0.6s linear infinite;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* Vertical suit sections */
+.solver-suit-block {
+  margin-bottom: 5px;
+  padding: 4px 5px;
+  border-radius: 5px;
+  background: rgba(255,255,255,0.03);
+  border-left: 2px solid transparent;
+}
+.solver-suit-block.best-suit {
+  border-left-color: #ffd700;
+  background: rgba(255,215,0,0.06);
+}
+.solver-suit-hdr {
+  font-weight: 700; font-size: 12px;
+  margin-bottom: 2px;
+  display: flex; align-items: center; gap: 3px;
+}
+.solver-suit-hdr .si { font-size: 13px; }
+.solver-suit-hdr .si.red { color: #ef5350; }
+.solver-suit-hdr .si.black { color: #e0e0e0; }
+.solver-suit-hdr .tc { font-size: 10px; opacity: 0.7; font-weight: 600; }
+.solver-bid-line {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 11px;
+  font-weight: 600;
+  padding: 1px 2px;
+  line-height: 1.5;
+}
+.solver-bid-line.best-line {
+  background: rgba(255,215,0,0.12);
+  border-radius: 3px;
+  padding: 2px 4px;
+  font-weight: 700;
+}
+.solver-bid-line .bl { opacity: 0.9; min-width: 28px; font-weight: 700; }
+.solver-bid-line .bp { min-width: 30px; text-align: right; font-weight: 700; }
+.solver-bid-line .be { min-width: 42px; text-align: right; font-weight: 700; }
+/* .bb removed */
+.ev-pos { color: #81c784; }
+.ev-neg { color: #ef5350; }
+.ev-zero { color: #888; }
+
+.solver-rec {
+  margin-top: 4px;
+  padding: 4px 6px;
+  background: rgba(255,215,0,0.12);
+  border: 1px solid rgba(255,215,0,0.3);
+  border-radius: 5px;
+  text-align: center;
+  font-weight: 700;
+  color: #ffd700;
+  font-size: 11px;
+  line-height: 1.3;
+}
+.solver-no-trump {
+  padding: 1px 5px;
+  font-size: 11px;
+  opacity: 0.5;
+  font-style: italic;
+  font-weight: 600;
+  margin-bottom: 3px;
+}
+
+/* Card play advisor compact */
+.play-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 12px;
+  font-weight: 600;
+  padding: 2px 4px;
+  border-radius: 3px;
+}
+.play-row:first-of-type { background: rgba(255,215,0,0.08); }
+.play-row .cm { font-weight: 700; font-size: 13px; }
+.play-row .cm.red { color: #ef5350; }
+.play-row .cm.black { color: #e0e0e0; }
+.play-ev-bar { display: inline-block; width: 42px; height: 4px; border-radius: 2px; background: rgba(255,255,255,0.1); overflow: hidden; margin: 0 4px; vertical-align: middle; }
+.play-ev-bar-fill { height: 100%; border-radius: 2px; }
+.play-ev-bar-fill.positive { background: linear-gradient(90deg, #66bb6a, #43a047); }
+.play-ev-bar-fill.negative { background: linear-gradient(90deg, #ef5350, #c62828); }
+
+/* ── LOG ── */
+#log-panel {
+  position: absolute;
+  bottom: 28px;
+  right: 28px;
+  width: 280px;
+  max-height: 260px;
+  overflow-y: auto;
+  background: rgba(10,8,5,0.75);
+  border-radius: 14px;
+  padding: 10px 14px;
+  font-size: 12px;
+  line-height: 1.6;
+  z-index: 20;
+  backdrop-filter: blur(12px);
+  border: 1px solid rgba(255,255,255,0.08);
+  box-shadow: 0 4px 20px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.04);
+}
+#log-panel::-webkit-scrollbar { width: 4px; }
+#log-panel::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.25); border-radius: 3px; }
+.log-entry { opacity: 1; padding: 1px 0; font-weight: 600; }
+.log-entry.highlight { color: #ffd700; font-weight: 700; }
+.log-entry.score-change { color: #81c784; font-weight: 700; }
+
+/* ── CONTROLS (top-right cluster) ── */
+#top-controls {
+  position: absolute;
+  top: 28px;
+  right: 28px;
+  display: flex;
+  gap: 4px;
+  z-index: 20;
+}
+.ctrl-btn {
+  padding: 6px 12px;
+  border: 1px solid rgba(255,255,255,0.2);
+  border-radius: 8px;
+  background: rgba(10,8,5,0.7);
+  color: #e0e0e0;
+  font-size: 11px;
+  font-weight: 600;
+  cursor: pointer;
+  backdrop-filter: blur(8px);
+  transition: background 0.15s, box-shadow 0.15s;
+  white-space: nowrap;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+}
+.ctrl-btn:hover { background: rgba(255,255,255,0.12); box-shadow: 0 3px 12px rgba(0,0,0,0.4); }
+.ctrl-btn.active { background: rgba(255,215,0,0.2); border-color: #ffd700; color: #ffd700; box-shadow: 0 0 10px rgba(255,215,0,0.2); }
+#log-counter { font-size: 9px; color: #81c784; opacity: 0.7; padding: 4px 6px; white-space: nowrap; display: inline-flex; align-items: center; }
+
+/* ── HAND RESULT OVERLAY ── */
+#hand-result {
+  display: none;
+  position: absolute;
+  top: 50%; left: 50%;
+  transform: translate(-50%, -50%);
+  background: rgba(10,8,5,0.9);
+  border: 1px solid rgba(255,215,0,0.3);
+  border-radius: 16px;
+  padding: 22px 30px;
+  z-index: 50;
+  min-width: 300px;
+  text-align: center;
+  backdrop-filter: blur(16px);
+  box-shadow: 0 8px 40px rgba(0,0,0,0.6), inset 0 1px 0 rgba(255,255,255,0.05);
+}
+#hand-result.show { display: block; }
+#hand-result h2 { color: #ffd700; margin-bottom: 10px; font-size: 16px; text-shadow: 0 0 10px rgba(255,215,0,0.3); }
+#hand-result .result-grid {
+  display: grid;
+  grid-template-columns: auto auto;
+  gap: 3px 14px;
+  font-size: 12px;
+  margin: 10px 0;
+  text-align: left;
+}
+.result-label { opacity: 0.7; }
+#hand-result .result-action { margin-top: 14px; }
+#hand-result .result-action button {
+  padding: 8px 26px; border: none; border-radius: 12px;
+  background: linear-gradient(135deg, #ffc107, #f9a825, #f57f17);
+  color: #000; font-size: 13px; font-weight: 700; cursor: pointer;
+  box-shadow: 0 3px 12px rgba(249,168,37,0.3), inset 0 1px 0 rgba(255,255,255,0.3);
+  transition: transform 0.1s, box-shadow 0.15s;
+}
+#hand-result .result-action button:hover { transform: scale(1.05); box-shadow: 0 5px 18px rgba(249,168,37,0.4); }
+
+#game-over {
+  display: none; position: absolute; inset: 0;
+  background: rgba(0,0,0,0.85); z-index: 100;
+  justify-content: center; align-items: center;
+  flex-direction: column; gap: 20px;
+  backdrop-filter: blur(6px);
+}
+#game-over.show { display: flex; }
+#game-over h1 { font-size: 36px; color: #ffd700; text-shadow: 0 0 20px rgba(255,215,0,0.4); }
+#game-over p { font-size: 18px; opacity: 0.8; }
+#game-over button {
+  padding: 12px 36px; border: none; border-radius: 14px;
+  background: linear-gradient(135deg, #ffc107, #f9a825, #f57f17);
+  color: #000; font-size: 16px; font-weight: 700; cursor: pointer;
+  box-shadow: 0 4px 16px rgba(249,168,37,0.3), inset 0 1px 0 rgba(255,255,255,0.3);
+  transition: transform 0.1s, box-shadow 0.15s;
+}
+#game-over button:hover { transform: scale(1.05); box-shadow: 0 6px 24px rgba(249,168,37,0.4); }
+
+@keyframes dealCard {
+  from { opacity: 0; transform: scale(0.5) rotate(10deg); }
+  to   { opacity: 1; transform: scale(1) rotate(0); }
+}
+.card.dealing { animation: dealCard 0.3s ease forwards; }
+</style>
+</head>
+<body>
+<div id="table">
+  <div id="trump-indicator" class="hidden"><div class="trump-row"><span class="trump-label">Trump</span><span class="trump-icon" id="trump-suit"></span></div><div class="bidder-info" id="bidder-info"></div></div>
+  <div id="scoreboard">
+    <div class="score-team">
+      <span class="score-label team0-color">You &amp; North</span>
+      <span class="score-val team0-color" id="score0">0</span>
+    </div>
+    <div id="game-info">
+      <span id="hand-num">Hand 1</span>
+    </div>
+    <div class="score-team">
+      <span class="score-val team1-color" id="score1">0</span>
+      <span class="score-label team1-color">West &amp; East</span>
+    </div>
+  </div>
+
+  <div id="top-controls">
+    <button class="ctrl-btn active" id="solver-toggle" onclick="toggleSolver()">Solver ON</button>
+    <button class="ctrl-btn" id="show-cards-btn" onclick="toggleShowCards()">Show Cards</button>
+    <button class="ctrl-btn" id="back-btn" onclick="goBack()" style="opacity: 1;">← Back</button>
+    <button class="ctrl-btn" onclick="newGame()">New Game</button>
+    <span id="log-counter">0 logged</span>
+    <button class="ctrl-btn" onclick="GameLog.exportJSON()">Export Log</button>
+    <button class="ctrl-btn" onclick="if(confirm('Clear all logged data?'))GameLog.clear()">Clear Log</button>
+  </div>
+
+  <!-- Player areas -->
+  <div class="player-area south" id="pa-south">
+    <div class="hand south" id="hand-south"><div class="card card-front   red dealing" data-card-id="113"><div class="card-tl"><span class="card-rank">K</span><span class="card-suit-sm">♦</span></div><div class="card-center">♦</div><div class="card-br"><span class="card-rank">K</span><span class="card-suit-sm">♦</span></div></div><div class="card card-front   red dealing" data-card-id="202"><div class="card-tl"><span class="card-rank">2</span><span class="card-suit-sm">♥</span></div><div class="card-center">♥</div><div class="card-br"><span class="card-rank">2</span><span class="card-suit-sm">♥</span></div></div><div class="card card-front   red dealing" data-card-id="207"><div class="card-tl"><span class="card-rank">7</span><span class="card-suit-sm">♥</span></div><div class="card-center">♥</div><div class="card-br"><span class="card-rank">7</span><span class="card-suit-sm">♥</span></div></div><div class="card card-front   black dealing" data-card-id="302"><div class="card-tl"><span class="card-rank">2</span><span class="card-suit-sm">♠</span></div><div class="card-center">♠</div><div class="card-br"><span class="card-rank">2</span><span class="card-suit-sm">♠</span></div></div><div class="card card-front   black dealing" data-card-id="309"><div class="card-tl"><span class="card-rank">9</span><span class="card-suit-sm">♠</span></div><div class="card-center">♠</div><div class="card-br"><span class="card-rank">9</span><span class="card-suit-sm">♠</span></div></div><div class="card card-front   black dealing" data-card-id="311"><div class="card-tl"><span class="card-rank">J</span><span class="card-suit-sm">♠</span></div><div class="card-center">♠</div><div class="card-br"><span class="card-rank">J</span><span class="card-suit-sm">♠</span></div></div></div>
+    <div class="player-label active-turn" id="label-south">You</div>
+  </div>
+  <div class="player-area north" id="pa-north">
+    <div class="player-label" id="label-north">Partner <span class="dealer-chip">D</span></div>
+    <div id="hand-north" class="opp-hand opp-hand-closed"><div class="card card-back opp-card"><div class="card-count">6</div></div></div>
+  </div>
+  <div class="player-area west" id="pa-west">
+    <div class="player-label" id="label-west">West</div>
+    <div id="hand-west" class="opp-hand opp-hand-closed"><div class="card card-back opp-card rotated-card"><div class="card-count">6</div></div></div>
+  </div>
+  <div class="player-area east" id="pa-east">
+    <div class="player-label" id="label-east">East</div>
+    <div id="hand-east" class="opp-hand opp-hand-closed"><div class="card card-back opp-card rotated-card"><div class="card-count">6</div></div></div>
+  </div>
+
+  <div id="trick-area"></div>
+  <div id="solver-panel" class="show"><div class="drag-handle" onmousedown="startDragSolver(event)"><span class="grip">⋮⋮ drag</span><select class="sim-sel" onmousedown="event.stopPropagation()" onchange="NUM_SIMS=+this.value;document.querySelectorAll(&#39;.sim-sel&#39;).forEach(s=&gt;s.value=NUM_SIMS);rerunSolver()"><option value="5000">5k</option><option value="10000" selected="">10k</option><option value="20000">20k</option><option value="50000">50k</option><option value="100000">100k</option></select></div><h3>BID ANALYSIS <span style="font-size:8px;opacity:0.4;font-weight:400">10,000 sims · <span style="color:#ff9800">Heur</span></span></h3><div class="solver-suit-block best-suit"><div class="solver-suit-hdr"><span class="si black">♠</span>Spades <span class="tc">3t: 2 9 J</span></div><div class="solver-bid-line "><span class="bl">Bid 2</span><span class="bp">69%</span><span class="be ev-pos">+1.60</span></div><div class="solver-bid-line best-line"><span class="bl">Bid 3</span><span class="bp">47%</span><span class="be ev-pos">+0.20 ★</span></div><div class="solver-bid-line "><span class="bl">Bid 4</span><span class="bp">35%</span><span class="be ev-neg">-1.20</span></div><div class="solver-bid-line "><span class="bl">Bid 5</span><span class="bp">2%</span><span class="be ev-neg">-4.76</span></div></div><div class="solver-suit-block "><div class="solver-suit-hdr"><span class="si red">♦</span>Diamonds <span class="tc">1t: K</span></div><div class="solver-bid-line "><span class="bl">Bid 2</span><span class="bp">68%</span><span class="be ev-pos">+1.15</span></div><div class="solver-bid-line "><span class="bl">Bid 3</span><span class="bp">36%</span><span class="be ev-neg">-0.75</span></div><div class="solver-bid-line "><span class="bl">Bid 4</span><span class="bp">7%</span><span class="be ev-neg">-3.40</span></div><div class="solver-bid-line "><span class="bl">Bid 5</span><span class="bp">1%</span><span class="be ev-neg">-4.89</span></div></div><div class="solver-suit-block "><div class="solver-suit-hdr"><span class="si red">♥</span>Hearts <span class="tc">2t: 2 7</span></div><div class="solver-bid-line "><span class="bl">Bid 2</span><span class="bp">50%</span><span class="be ev-pos">+0.35</span></div><div class="solver-bid-line "><span class="bl">Bid 3</span><span class="bp">25%</span><span class="be ev-neg">-1.37</span></div><div class="solver-bid-line "><span class="bl">Bid 4</span><span class="bp">6%</span><span class="be ev-neg">-3.48</span></div><div class="solver-bid-line "><span class="bl">Bid 5</span><span class="bp">1%</span><span class="be ev-neg">-4.81</span></div></div><div class="solver-no-trump"><span class="si black">♣</span> Clubs — none</div><div class="solver-rec">Bid 3 ♠ Spades<br>EV: +0.20</div></div>
+
+  <div id="bid-panel" class="show">
+    <div id="bid-prompt">Your bid:</div>
+    <div id="bid-buttons"><button class="bid-btn pass">Pass</button><button class="bid-btn bid-val">4</button><button class="bid-btn bid-val">5</button></div>
+  </div>
+
+  <div id="hand-result">
+    <h2 id="result-title"></h2>
+    <div class="result-grid" id="result-grid"></div>
+    <div id="result-score-line"></div>
+    <div class="result-action"><button onclick="nextHand()">Next Hand</button></div>
+  </div>
+
+  <div id="game-over">
+    <h1 id="go-title"></h1>
+    <p id="go-detail"></p>
+    <button onclick="newGame()">New Game</button>
+  </div>
+
+  <div id="log-panel"><div class="log-entry ">Hand 1 — Dealer: Partner</div><div class="log-entry ">East: Bid 3</div></div>
+<div class="bid-bubble east" id="bid-bubble-3">Bid 3</div></div>
+
+<script>
+// ══════════════════════════════════════════
+// PROPORTIONAL SCALING — scales all elements with viewport
+// Design baseline: 1200×800. Bigger/smaller screens scale proportionally.
+// ══════════════════════════════════════════
+(function() {
+  const BASE_W = 1200, BASE_H = 800;
+  function rescale() {
+    const w = window.innerWidth, h = window.innerHeight;
+    const scale = Math.min(w / BASE_W, h / BASE_H);
+    // Clamp between 0.5x and 1.5x so it doesn't get extreme
+    const clamped = Math.max(0.5, Math.min(1.5, scale));
+    document.body.style.zoom = clamped;
+  }
+  window.addEventListener('resize', rescale);
+  rescale();
+})();
+
+// ══════════════════════════════════════════
+// GAME ENGINE
+// ══════════════════════════════════════════
+const SUIT_NAMES=['Clubs','Diamonds','Hearts','Spades'];
+const SUIT_SYMBOLS=['♣','♦','♥','♠'];
+const RANK_NAMES={2:'2',3:'3',4:'4',5:'5',6:'6',7:'7',8:'8',9:'9',10:'10',11:'J',12:'Q',13:'K',14:'A'};
+const GAME_POINTS={14:4,13:3,12:2,11:1,10:10};
+let NUM_SIMS=10000;
+let SOLVER_ON=true;
+let NN_LOADED=false;
+let SHOW_ALL_CARDS=false;
+
+class Card{
+  constructor(r,s){this.rank=r;this.suit=s}
+  get gamePoints(){return GAME_POINTS[this.rank]||0}
+  get id(){return this.suit*100+this.rank}
+  get name(){return(RANK_NAMES[this.rank]||this.rank)+SUIT_SYMBOLS[this.suit]}
+  get isRed(){return this.suit===1||this.suit===2}
+  eq(o){return o&&this.rank===o.rank&&this.suit===o.suit}
+}
+
+function makeDeck(){const d=[];for(let s=0;s<4;s++)for(let r=2;r<=14;r++)d.push(new Card(r,s));return d}
+function shuffle(a){for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]]}return a}
+function dealHands(){const d=shuffle(makeDeck());const h=[];for(let i=0;i<4;i++)h.push(d.slice(i*6,i*6+6).sort((a,b)=>a.suit-b.suit||a.rank-b.rank));return h}
+function teamOf(p){return p%2}
+function legalPlays(h,tc,tr){if(tc.length===0)return[...h];const ls=tc[0].card.suit;if(ls===tr){const f=h.filter(c=>c.suit===tr);return f.length>0?f:[...h]}const f=h.filter(c=>c.suit===ls);if(f.length>0){const ft=h.filter(c=>c.suit===ls||c.suit===tr);return ft}return[...h]}
+
+function beats(ch,best,tr){
+  if(ch.suit===tr&&best.suit!==tr)return true;
+  if(ch.suit!==tr&&best.suit===tr)return false;
+  if(ch.suit===best.suit)return ch.rank>best.rank;
+  return false;
+}
+function trickWinner(cards,tr){let b=0;for(let i=1;i<cards.length;i++)if(beats(cards[i].card,cards[b].card,tr))b=i;return cards[b].player}
+function currentTrickWinner(cards,tr){if(!cards.length)return null;let b=0;for(let i=1;i<cards.length;i++)if(beats(cards[i].card,cards[b].card,tr))b=i;return cards[b].player}
+function currentBestCard(cards,tr){if(!cards.length)return null;let b=cards[0].card;for(let i=1;i<cards.length;i++)if(beats(cards[i].card,b,tr))b=cards[i].card;return b}
+
+class BidState{
+  constructor(d){this.dealer=d;this.currentBid=0;this.currentBidder=null;this.bids=[];this.complete=false}
+  biddingOrder(){return[0,1,2,3].map(i=>(this.dealer+1+i)%4)}
+  legalBids(p){
+    if(p===this.dealer){
+      if(this.currentBid===0)return[2,5];
+      return[0,this.currentBid,5].filter((v,i,a)=>a.indexOf(v)===i).sort((a,b)=>a-b);
+    }else{const o=[0];for(let b=Math.max(2,this.currentBid+1);b<=5;b++)o.push(b);return o}
+  }
+  placeBid(p,v){
+    this.bids.push({player:p,bid:v});
+    if(v>0){this.currentBid=v;this.currentBidder=p}
+    if(this.bids.length===4){this.complete=true;if(this.currentBidder===null){this.currentBid=2;this.currentBidder=this.dealer}}
+  }
+}
+
+function handTrumpStrength(h,s){
+  const t=h.filter(c=>c.suit===s),nt=h.filter(c=>c.suit!==s);
+  return{trumpCount:t.length,hasAce:t.some(c=>c.rank===14),hasKing:t.some(c=>c.rank===13),
+    hasQueen:t.some(c=>c.rank===12),hasJack:t.some(c=>c.rank===11),hasTen:t.some(c=>c.rank===10),
+    lowestTrump:t.length?Math.min(...t.map(c=>c.rank)):null,
+    offAces:nt.filter(c=>c.rank===14).length,offTens:nt.filter(c=>c.rank===10).length,
+    totalGP:h.reduce((s,c)=>s+c.gamePoints,0),trumpCards:t};
+}
+
+// estimatePoints: lightweight heuristic used only for chooseTrumpLead (AI pitch selection)
+function estimatePoints(s){
+  let p=0;if(!s.trumpCount)return 0;
+  if(s.hasAce)p+=0.95;else if(s.hasKing)p+=0.3;
+  if(s.lowestTrump!==null){if(s.lowestTrump<=3)p+=0.8;else if(s.lowestTrump<=5)p+=0.5;else if(s.lowestTrump<=7)p+=0.2}
+  if(s.hasJack)p+=0.5;
+  if(s.trumpCount>=4)p+=0.3;else if(s.trumpCount>=3)p+=0.1;
+  return p;
+}
+
+// ── MC-BASED BIDDING ──
+// Simulate a full hand played out with heuristic AI and return scoring
+function simPlayOut(hands,leader,trump){
+  const h=hands.map(x=>[...x]);const tricks=[];let ld=leader;
+  for(let t=0;t<6;t++){
+    const tc=[];
+    for(let i=0;i<4;i++){
+      const p=(ld+i)%4;let card;
+      if(t===0&&i===0){const tt=h[p].filter(c=>c.suit===trump).sort((a,b)=>b.rank-a.rank);card=tt.length?tt[0]:h[p][0]}
+      else{const lg=legalPlays(h[p],tc,trump);card=heuristicPlay(p,h[p],tc,trump,{tricks},leader);if(!lg.some(c=>c.eq(card)))card=lg[0]}
+      h[p]=h[p].filter(c=>!c.eq(card));tc.push({player:p,card});
+    }
+    const w=trickWinner(tc,trump);tricks.push({cards:tc});ld=w;
+  }
+  return computeScoring(tricks,trump);
+}
+
+// Run MC sims to get make% and avg points for each bid level for a given suit
+function mcBidEvalSuit(hand,pi,suit,sims){
+  const team=teamOf(pi);
+  const make=[0,0,0,0,0,0];let totPts=0,totTW=0;
+  for(let i=0;i<sims;i++){
+    const deck=makeDeck().filter(c=>!hand.some(h=>h.eq(c)));shuffle(deck);
+    const hands=[null,null,null,null];hands[pi]=[...hand];
+    let di=0;for(let p=0;p<4;p++){if(p===pi)continue;hands[p]=[];for(let j=0;j<6;j++)hands[p].push(deck[di++])}
+    const sc=simPlayOut(hands,pi,suit);
+    const pts=sc.points[team],tw=sc.tricksWon[team];
+    totPts+=pts;totTW+=tw;
+    for(let b=2;b<=4;b++)if(pts>=b)make[b]++;
+    if(tw>=6)make[5]++; // bid 5 = all 6 tricks, awards 5 points
+  }
+  return{make,totPts,totTW,sims};
+}
+
+
+const AI_BID_SIMS=150; // sims per suit for AI bid decisions
+
+function heuristicBid(pi,hand,bs,scores){
+  const legal=bs.legalBids(pi);
+  const team=teamOf(pi),opp=1-team;
+  const myScore=scores?scores[team]||0:0,oppScore=scores?scores[opp]||0:0;
+
+  // Forced dealer bid when stuck
+  if(pi===bs.dealer&&bs.currentBid===0&&bs.bids.length===3)return 2;
+
+  let bestBid=0,bestEV=-Infinity;
+
+  for(let s=0;s<4;s++){
+    // Only consider suits where we have 2+ cards (single trump almost never biddable)
+    if(hand.filter(c=>c.suit===s).length<2)continue;
+    const r=mcBidEvalSuit(hand,pi,s,AI_BID_SIMS);
+
+    const avgPts=r.totPts/r.sims;
+    for(let b=5;b>=2;b--){
+      if(!legal.includes(b))continue;
+      const makeRate=r.make[b]/r.sims;
+
+      // Base threshold: 50% make rate to bid (aggressive, +EV with blocking value)
+      let threshold=0.50;
+      if(b===5)threshold=0.60; // bid 5 is all-or-nothing, need higher confidence
+
+      // ── ENDGAME BLOCKING ──
+      const oppNeed=21-oppScore;
+      // If opponents can bid out at this level or lower, block aggressively
+      if(oppNeed<=4&&oppNeed>=2){
+        if(b<=oppNeed+1)threshold-=0.20;
+        else threshold-=0.10;
+      }
+      if(oppScore>=17)threshold-=0.12;
+      else if(oppScore>=14)threshold-=0.06;
+
+      // If we're comfortably ahead, be slightly more conservative
+      if(myScore>=17&&oppScore<12)threshold+=0.05;
+
+      // Dealer steal: slightly lower threshold since we're just matching, not outbidding
+      if(pi===bs.dealer&&bs.currentBid>0&&b===bs.currentBid)threshold-=0.05;
+
+      threshold=Math.max(threshold,0.15); // never bid on <15% make rate
+
+      if(makeRate>=threshold){
+        // EV = P(make)*ptsWhenMade - P(set)*bidLevel + blocking value
+        const blockingBonus=(oppScore>=14)?0.3:0.1;
+        const ptsWhenMade=b===5?5:avgPts; // bid 5 awards 5 points
+        const ev=makeRate*ptsWhenMade-(1-makeRate)*b+blockingBonus;
+        // Prefer highest bid level (aggressive), then best EV
+        if(b>bestBid||(b===bestBid&&ev>bestEV)){
+          bestBid=b;bestEV=ev;
+        }
+        break; // found highest makeable bid for this suit
+      }
+    }
+  }
+
+  return bestBid;
+}
+
+function chooseTrumpLead(pi,hand){let bs=null,bsc=-999;for(let s=0;s<4;s++){const st=handTrumpStrength(hand,s);const sc=estimatePoints(st)+.1*st.trumpCount;if(sc>bsc){bsc=sc;bs=s}}const tc=hand.filter(c=>c.suit===bs).sort((a,b)=>b.rank-a.rank);return tc.length?tc[0]:hand[0]}
+
+function trumpDump(fC){if(fC.length<=1)return fC[0];const pr=new Set();if(fC.some(c=>c.rank===11))pr.add(11);if(fC.some(c=>c.rank===10))pr.add(10);pr.add(fC[fC.length-1].rank);const sac=fC.filter(c=>!pr.has(c.rank));return sac.length?sac[sac.length-1]:fC[fC.length-1]}
+
+function heuristicPlay(pi,hand,tc,tr,gs,bidder){
+  if(typeof bidder==='undefined')bidder=0;
+  if(tr===null)return chooseTrumpLead(pi,hand);
+  const legal=legalPlays(hand,tc,tr);if(legal.length===1)return legal[0];
+  const mt=teamOf(pi),bt=teamOf(bidder),isDef=mt!==bt,tricks=gs.tricks||[];
+  const aceGone=tricks.some(t=>t.cards.some(x=>x.card.suit===tr&&x.card.rank===14));
+  if(!tc.length){
+    // ── LEADING ──
+    const tH=legal.filter(c=>c.suit===tr).sort((a,b)=>b.rank-a.rank),nT=legal.filter(c=>c.suit!==tr);
+    if(tH.length&&tH[0].rank===14&&!tricks.some(t=>t.cards.some(x=>x.card.suit===tr&&x.card.rank===11)))return tH[0];
+    if(tH.length>=2){
+      const hJ2=tH.some(c=>c.rank===11),jOut=tricks.some(t=>t.cards.some(x=>x.card.suit===tr&&x.card.rank===11));
+      if(hJ2&&!jOut){const nj=tH.filter(c=>c.rank!==11);if(nj.length)return nj[0]}
+      return tH[0];
+    }
+    if(isDef&&tH.length===1&&aceGone)return tH[0];
+    const oA=nT.filter(c=>c.rank===14);if(oA.length)return oA[0];
+    if(isDef){const hi=nT.filter(c=>c.rank>=12).sort((a,b)=>b.rank-a.rank);if(hi.length)return hi[0];const tens=nT.filter(c=>c.rank===10);if(tens.length)return tens[0]}
+    if(nT.length){const sc={};nT.forEach(c=>{sc[c.suit]=(sc[c.suit]||0)+1});const ss=Object.entries(sc).reduce((a,b)=>+a[1]<=+b[1]?a:b)[0];return nT.filter(c=>c.suit===+ss).sort((a,b)=>a.rank-b.rank)[0]}
+    return tH.length?tH[tH.length-1]:legal[0];
+  }
+  // ── FOLLOWING ──
+  const cw=currentTrickWinner(tc,tr),wt=teamOf(cw),tGP=tc.reduce((s,x)=>s+x.card.gamePoints,0);
+  const hJ=tc.some(x=>x.card.suit===tr&&x.card.rank===11),ls=tc[0].card.suit;
+  const tC=legal.filter(c=>c.suit===tr).sort((a,b)=>b.rank-a.rank),fC=legal.filter(c=>c.suit===ls).sort((a,b)=>b.rank-a.rank);
+  // 4th seat
+  if(tc.length===3){
+    if(wt===mt)return legal.sort((a,b)=>b.gamePoints-a.gamePoints)[0];
+    const w=[];for(const c of legal)if(trickWinner([...tc,{player:pi,card:c}],tr)===pi)w.push(c);
+    if(w.length){if(isDef)return w.sort((a,b)=>a.rank-b.rank)[0];if(hJ||tGP>=5)return w.sort((a,b)=>a.rank-b.rank)[0];return w.sort((a,b)=>a.gamePoints-b.gamePoints||a.rank-b.rank)[0]}
+    return legal.sort((a,b)=>a.gamePoints-b.gamePoints||a.rank-b.rank)[0];
+  }
+  // Partner winning
+  if(wt===mt){
+    if(isDef&&ls!==tr&&tC.length){const bc=currentBestCard(tc,tr);if(bc.suit!==tr&&(tGP>=2||hJ))return tC[tC.length-1]}
+    if(fC.length)return fC.sort((a,b)=>b.gamePoints-a.gamePoints)[0];
+    const oC=legal.filter(c=>c.suit!==tr&&c.suit!==ls);if(oC.length)return oC.sort((a,b)=>b.gamePoints-a.gamePoints)[0];
+    return tC.length?tC[tC.length-1]:legal[0];
+  }
+  // Opponent winning — defender house-rule trump-in
+  if(isDef&&ls!==tr&&fC.length&&tC.length){const bc=currentBestCard(tc,tr);if(bc.suit!==tr&&(tGP>=2||hJ||tC.length>=2))return tC[tC.length-1]}
+  // Partner conservative trump-in
+  if(!isDef&&ls!==tr&&!fC.length&&tC.length){const bc=currentBestCard(tc,tr);if(bc.suit===tr){const ov=tC.filter(c=>c.rank>bc.rank);if(ov.length&&hJ)return ov[ov.length-1]}else{if(hJ)return tC[tC.length-1];if(tGP>=8)return tC[tC.length-1];const off=legal.filter(c=>c.suit!==tr);if(off.length)return off.sort((a,b)=>a.gamePoints-b.gamePoints||a.rank-b.rank)[0];return tC[tC.length-1]}const off2=legal.filter(c=>c.suit!==tr);if(off2.length)return off2.sort((a,b)=>a.gamePoints-b.gamePoints||a.rank-b.rank)[0];return tC[tC.length-1]}
+  // Standard follow
+  if(fC.length){const bc=currentBestCard(tc,tr);const cb=fC.filter(c=>c.suit===bc.suit?c.rank>bc.rank:c.suit===tr);if(cb.length)return cb.sort((a,b)=>a.rank-b.rank)[0];if(ls===tr&&fC.length>1)return trumpDump(fC);return fC.sort((a,b)=>a.gamePoints-b.gamePoints||a.rank-b.rank)[0]}
+  if(tC.length){const bc=currentBestCard(tc,tr);if(bc.suit===tr){const ov=tC.filter(c=>c.rank>bc.rank);if(ov.length)return ov[ov.length-1]}else{if(isDef)return tC[tC.length-1];if(tGP>=3||hJ||tc.length>=2)return tC[tC.length-1]}}
+  return legal.sort((a,b)=>a.gamePoints-b.gamePoints||a.rank-b.rank)[0];
+}
+
+function computeScoring(tricks,tr){
+  const cap={0:[],1:[]},tw={0:0,1:0};
+  for(const t of tricks){const w=trickWinner(t.cards,tr);const tm=teamOf(w);tw[tm]++;t.cards.forEach(tc=>cap[tm].push(tc.card))}
+  const tc={0:cap[0].filter(c=>c.suit===tr),1:cap[1].filter(c=>c.suit===tr)};const at=[...tc[0],...tc[1]];
+  let hi=null,hiT=null,lo=null,loT=null,jT=null,jC=false,gT=null;
+  if(at.length){const h=at.reduce((a,b)=>a.rank>b.rank?a:b);hi=h;hiT=tc[0].some(c=>c.eq(h))?0:1;const l=at.reduce((a,b)=>a.rank<b.rank?a:b);lo=l;loT=tc[0].some(c=>c.eq(l))?0:1}
+  const j=new Card(11,tr);for(let t=0;t<2;t++)if(cap[t].some(c=>c.eq(j))){jC=true;jT=t}
+  const gp={0:cap[0].reduce((s,c)=>s+c.gamePoints,0),1:cap[1].reduce((s,c)=>s+c.gamePoints,0)};
+  if(gp[0]>gp[1])gT=0;else if(gp[1]>gp[0])gT=1;
+  const pts={0:0,1:0};if(hiT!==null)pts[hiT]++;if(loT!==null)pts[loT]++;if(jC)pts[jT]++;if(gT!==null)pts[gT]++;
+  return{high:hi,highTeam:hiT,low:lo,lowTeam:loT,jackCaptured:jC,jackTeam:jT,gameTeam:gT,gp,points:pts,tricksWon:tw,captured:cap};
+}
+
+
+// ══════════════════════════════════════════
+// WEB WORKER FOR MONTE CARLO
+// ══════════════════════════════════════════
+
+// Build worker source from the game engine code (self-contained)
+const WORKER_SRC = `
+const GAME_POINTS={14:4,13:3,12:2,11:1,10:10};
+class Card{constructor(r,s){this.rank=r;this.suit=s}get gamePoints(){return GAME_POINTS[this.rank]||0}get id(){return this.suit*100+this.rank}eq(o){return o&&this.rank===o.rank&&this.suit===o.suit}}
+function makeDeck(){const d=[];for(let s=0;s<4;s++)for(let r=2;r<=14;r++)d.push(new Card(r,s));return d}
+function shuffle(a){for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]]}return a}
+function teamOf(p){return p%2}
+function legalPlays(h,tc,tr){if(!tc.length)return[...h];const ls=tc[0].card.suit;if(ls===tr){const f=h.filter(c=>c.suit===tr);return f.length?f:[...h]}const f=h.filter(c=>c.suit===ls);if(f.length){return h.filter(c=>c.suit===ls||c.suit===tr)}return[...h]}
+function beats(ch,b,tr){if(ch.suit===tr&&b.suit!==tr)return true;if(ch.suit!==tr&&b.suit===tr)return false;if(ch.suit===b.suit)return ch.rank>b.rank;return false}
+function trickWinner(cards,tr){let b=0;for(let i=1;i<cards.length;i++)if(beats(cards[i].card,cards[b].card,tr))b=i;return cards[b].player}
+function currentTrickWinner(cards,tr){if(!cards.length)return null;let b=0;for(let i=1;i<cards.length;i++)if(beats(cards[i].card,cards[b].card,tr))b=i;return cards[b].player}
+function currentBestCard(cards,tr){if(!cards.length)return null;let b=cards[0].card;for(let i=1;i<cards.length;i++)if(beats(cards[i].card,b,tr))b=cards[i].card;return b}
+
+function handTrumpStrength(h,s){
+  const t=h.filter(c=>c.suit===s),nt=h.filter(c=>c.suit!==s);
+  return{trumpCount:t.length,hasAce:t.some(c=>c.rank===14),hasKing:t.some(c=>c.rank===13),
+    hasQueen:t.some(c=>c.rank===12),hasJack:t.some(c=>c.rank===11),hasTen:t.some(c=>c.rank===10),
+    lowestTrump:t.length?Math.min(...t.map(c=>c.rank)):null,
+    offAces:nt.filter(c=>c.rank===14).length,offTens:nt.filter(c=>c.rank===10).length,
+    totalGP:h.reduce((s,c)=>s+c.gamePoints,0),trumpCards:t.map(c=>({rank:c.rank,suit:c.suit}))};
+}
+
+function estimatePoints(s){let p=0;if(!s.trumpCount)return 0;if(s.hasAce)p+=0.95;else if(s.hasKing)p+=0.3;if(s.lowestTrump!==null){if(s.lowestTrump<=3)p+=0.8;else if(s.lowestTrump<=5)p+=0.5;else if(s.lowestTrump<=7)p+=0.2}if(s.hasJack)p+=0.5;if(s.trumpCount>=4)p+=0.3;else if(s.trumpCount>=3)p+=0.1;return p}
+
+class BidState{constructor(d){this.dealer=d;this.currentBid=0;this.currentBidder=null;this.bids=[];this.complete=false}biddingOrder(){return[0,1,2,3].map(i=>(this.dealer+1+i)%4)}legalBids(p){if(p===this.dealer){if(this.currentBid===0)return[2,5];return[0,this.currentBid,5].filter((v,i,a)=>a.indexOf(v)===i).sort((a,b)=>a-b)}else{const o=[0];for(let b=Math.max(2,this.currentBid+1);b<=5;b++)o.push(b);return o}}placeBid(p,v){this.bids.push({player:p,bid:v});if(v>0){this.currentBid=v;this.currentBidder=p}if(this.bids.length===4){this.complete=true;if(this.currentBidder===null){this.currentBid=2;this.currentBidder=this.dealer}}}}
+
+function heuristicBid(pi,hand,bs,scores){let bestSuit=null,bestEP=0;for(let s=0;s<4;s++){const st=handTrumpStrength(hand,s);const ep=estimatePoints(st);if(ep>bestEP){bestEP=ep;bestSuit=s}}let bid=Math.floor(bestEP);if(bid<2)return 0;const legal=bs.legalBids(pi),mt=teamOf(pi),ot=1-mt;if(scores){const m=scores[mt]||0,o=scores[ot]||0;if(o>=17&&m<o)bid=Math.min(bid+1,5);if(m>=19&&bid<2)bid=2}if(pi===bs.dealer&&bs.currentBid>0&&bs.currentBid<=bid)bid=Math.max(bid,bs.currentBid);let actual=0;for(let b=5;b>=2;b--)if(legal.includes(b)&&b<=bid){actual=b;break}if(pi===bs.dealer&&bs.currentBid===0&&bs.bids.length===3)actual=2;return actual}
+
+function trumpDump(fC){if(fC.length<=1)return fC[0];const pr=new Set();if(fC.some(c=>c.rank===11))pr.add(11);if(fC.some(c=>c.rank===10))pr.add(10);pr.add(fC[fC.length-1].rank);const sac=fC.filter(c=>!pr.has(c.rank));return sac.length?sac[sac.length-1]:fC[fC.length-1]}
+function heuristicPlay(pi,hand,tc,tr,gs,bidder){
+  if(typeof bidder==='undefined')bidder=0;
+  if(tr===null){let bs=null,bsc=-999;for(let s=0;s<4;s++){const st=handTrumpStrength(hand,s);const sc=estimatePoints(st)+.1*st.trumpCount;if(sc>bsc){bsc=sc;bs=s}}const tcc=hand.filter(c=>c.suit===bs).sort((a,b)=>b.rank-a.rank);return tcc.length?tcc[0]:hand[0]}
+  const legal=legalPlays(hand,tc,tr);if(legal.length===1)return legal[0];
+  const mt=teamOf(pi),bt=teamOf(bidder),isDef=mt!==bt,tricks=gs.tricks||[];
+  const aceGone=tricks.some(t=>t.cards.some(x=>x.card.suit===tr&&x.card.rank===14));
+  if(!tc.length){
+    const tH=legal.filter(c=>c.suit===tr).sort((a,b)=>b.rank-a.rank),nT=legal.filter(c=>c.suit!==tr);
+    if(tH.length&&tH[0].rank===14&&!tricks.some(t=>t.cards.some(x=>x.card.suit===tr&&x.card.rank===11)))return tH[0];
+    if(tH.length>=2){const hJ2=tH.some(c=>c.rank===11),jOut=tricks.some(t=>t.cards.some(x=>x.card.suit===tr&&x.card.rank===11));if(hJ2&&!jOut){const nj=tH.filter(c=>c.rank!==11);if(nj.length)return nj[0]}return tH[0]}
+    if(isDef&&tH.length===1&&aceGone)return tH[0];
+    const oA=nT.filter(c=>c.rank===14);if(oA.length)return oA[0];
+    if(isDef){const hi=nT.filter(c=>c.rank>=12).sort((a,b)=>b.rank-a.rank);if(hi.length)return hi[0];const tens=nT.filter(c=>c.rank===10);if(tens.length)return tens[0]}
+    if(nT.length){const sc={};nT.forEach(c=>{sc[c.suit]=(sc[c.suit]||0)+1});const ss=Object.entries(sc).reduce((a,b)=>+a[1]<=+b[1]?a:b)[0];return nT.filter(c=>c.suit===+ss).sort((a,b)=>a.rank-b.rank)[0]}
+    return tH.length?tH[tH.length-1]:legal[0];
+  }
+  const cw=currentTrickWinner(tc,tr),wt=teamOf(cw),tGP=tc.reduce((s,x)=>s+x.card.gamePoints,0),hJ=tc.some(x=>x.card.suit===tr&&x.card.rank===11),ls=tc[0].card.suit;
+  const tC=legal.filter(c=>c.suit===tr).sort((a,b)=>b.rank-a.rank),fC=legal.filter(c=>c.suit===ls).sort((a,b)=>b.rank-a.rank);
+  if(tc.length===3){
+    if(wt===mt)return legal.sort((a,b)=>b.gamePoints-a.gamePoints)[0];
+    const w=[];for(const c of legal)if(trickWinner([...tc,{player:pi,card:c}],tr)===pi)w.push(c);
+    if(w.length){if(isDef)return w.sort((a,b)=>a.rank-b.rank)[0];if(hJ||tGP>=5)return w.sort((a,b)=>a.rank-b.rank)[0];return w.sort((a,b)=>a.gamePoints-b.gamePoints||a.rank-b.rank)[0]}
+    return legal.sort((a,b)=>a.gamePoints-b.gamePoints||a.rank-b.rank)[0];
+  }
+  if(wt===mt){
+    if(isDef&&ls!==tr&&tC.length){const bc=currentBestCard(tc,tr);if(bc.suit!==tr&&(tGP>=2||hJ))return tC[tC.length-1]}
+    if(fC.length)return fC.sort((a,b)=>b.gamePoints-a.gamePoints)[0];
+    const oC=legal.filter(c=>c.suit!==tr&&c.suit!==ls);if(oC.length)return oC.sort((a,b)=>b.gamePoints-a.gamePoints)[0];
+    return tC.length?tC[tC.length-1]:legal[0];
+  }
+  if(isDef&&ls!==tr&&fC.length&&tC.length){const bc=currentBestCard(tc,tr);if(bc.suit!==tr&&(tGP>=2||hJ||tC.length>=2))return tC[tC.length-1]}
+  if(!isDef&&ls!==tr&&!fC.length&&tC.length){const bc=currentBestCard(tc,tr);if(bc.suit===tr){const ov=tC.filter(c=>c.rank>bc.rank);if(ov.length&&hJ)return ov[ov.length-1]}else{if(hJ)return tC[tC.length-1];if(tGP>=8)return tC[tC.length-1];const off=legal.filter(c=>c.suit!==tr);if(off.length)return off.sort((a,b)=>a.gamePoints-b.gamePoints||a.rank-b.rank)[0];return tC[tC.length-1]}const off2=legal.filter(c=>c.suit!==tr);if(off2.length)return off2.sort((a,b)=>a.gamePoints-b.gamePoints||a.rank-b.rank)[0];return tC[tC.length-1]}
+  if(fC.length){const bc=currentBestCard(tc,tr);const cb=fC.filter(c=>c.suit===bc.suit?c.rank>bc.rank:c.suit===tr);if(cb.length)return cb.sort((a,b)=>a.rank-b.rank)[0];if(ls===tr&&fC.length>1)return trumpDump(fC);return fC.sort((a,b)=>a.gamePoints-b.gamePoints||a.rank-b.rank)[0]}
+  if(tC.length){const bc=currentBestCard(tc,tr);if(bc.suit===tr){const ov=tC.filter(c=>c.rank>bc.rank);if(ov.length)return ov[ov.length-1]}else{if(isDef)return tC[tC.length-1];if(tGP>=3||hJ||tc.length>=2)return tC[tC.length-1]}}
+  return legal.sort((a,b)=>a.gamePoints-b.gamePoints||a.rank-b.rank)[0];
+}
+
+function computeScoring(tricks,tr){const cap={0:[],1:[]},tw={0:0,1:0};for(const t of tricks){const w=trickWinner(t.cards,tr);const tm=teamOf(w);tw[tm]++;t.cards.forEach(tc=>cap[tm].push(tc.card))}const tc2={0:cap[0].filter(c=>c.suit===tr),1:cap[1].filter(c=>c.suit===tr)};const at=[...tc2[0],...tc2[1]];let hi=null,hiT=null,lo=null,loT=null,jT=null,jC=false,gT=null;if(at.length){const h=at.reduce((a,b)=>a.rank>b.rank?a:b);hi=h;hiT=tc2[0].some(c=>c.eq(h))?0:1;const l=at.reduce((a,b)=>a.rank<b.rank?a:b);lo=l;loT=tc2[0].some(c=>c.eq(l))?0:1}const j=new Card(11,tr);for(let t=0;t<2;t++)if(cap[t].some(c=>c.eq(j))){jC=true;jT=t}const gp={0:cap[0].reduce((s,c)=>s+c.gamePoints,0),1:cap[1].reduce((s,c)=>s+c.gamePoints,0)};if(gp[0]>gp[1])gT=0;else if(gp[1]>gp[0])gT=1;const pts={0:0,1:0};if(hiT!==null)pts[hiT]++;if(loT!==null)pts[loT]++;if(jC)pts[jT]++;if(gT!==null)pts[gT]++;return{points:pts,tricksWon:tw}}
+
+// rolloutPlay + buildVoids removed — NN defense replaces rollouts (instant, no delay)
+// ── Neural Network Inference ──
+let PITCH_MODEL = null;
+function nnForward(input) {
+  let x = Array.from(input);
+  for (const layer of PITCH_MODEL.layers) {
+    const w = layer.w, b = layer.b;
+    const out = new Array(b.length);
+    for (let i = 0; i < b.length; i++) {
+      let sum = b[i];
+      for (let j = 0; j < x.length; j++) sum += w[i][j] * x[j];
+      out[i] = layer.act === 'relu' ? Math.max(0, sum) : sum;
+    }
+    x = out;
+  }
+  return x[0];
+}
+function encodeState(pi, hand, tc, tr, tricks, bidder) {
+  const f = new Float32Array(170);
+  for (const c of hand) f[c.suit * 13 + (c.rank - 2)] = 1;
+  for (const t of tricks) for (const x of t.cards) f[52 + x.card.suit * 13 + (x.card.rank - 2)] = 1;
+  for (const x of tc) f[104 + x.card.suit * 13 + (x.card.rank - 2)] = 1;
+  f[156 + pi] = 1; f[160] = tricks.length / 6;
+  f[161] = teamOf(pi) !== teamOf(bidder) ? 1 : 0; f[162] = hand.length / 6;
+  if (tc.length > 0) f[163 + tc[0].card.suit] = 1;
+  let tp = 0;
+  for (const t of tricks) for (const x of t.cards) if (x.card.suit === tr) tp++;
+  for (const x of tc) if (x.card.suit === tr) tp++;
+  f[167] = tp / 13;
+  if (tc.length > 0) { let bi = 0; for (let i = 1; i < tc.length; i++) if (beats(tc[i].card, tc[bi].card, tr)) bi = i; f[168] = tc[bi].player === pi ? 1 : 0; }
+  let bp2 = 0, dp2 = 0;
+  for (const t of tricks) { const w = trickWinner(t.cards, tr); if (teamOf(w) === teamOf(bidder)) bp2++; else dp2++; }
+  f[169] = (bp2 - dp2) / 6;
+  return f;
+}
+function nnPlay(pi, hand, tc, tr, gs, bidder) {
+  if (!PITCH_MODEL || tr === null) return heuristicPlay(pi, hand, tc, tr, gs, bidder);
+  const legal = legalPlays(hand, tc, tr);
+  if (legal.length <= 1) return legal[0];
+  if (teamOf(pi) === teamOf(bidder)) return heuristicPlay(pi, hand, tc, tr, gs, bidder);
+  const tricks = gs.tricks || [];
+  let bestCard = legal[0], bestVal = Infinity;
+  for (const card of legal) {
+    const newHand = hand.filter(c => !c.eq(card));
+    const newTc = [...tc, {player: pi, card}];
+    const val = nnForward(encodeState(pi, newHand, newTc, tr, tricks, bidder));
+    if (val < bestVal) { bestVal = val; bestCard = card; }
+  }
+  return bestCard;
+}
+
+function simHandAsBidder(hands,bidder,dealer,trumpSuit){
+  const h=hands.map(x=>[...x]);const tricks=[];let leader=bidder;
+  for(let t=0;t<6;t++){const tc=[];for(let i=0;i<4;i++){const p=(leader+i)%4;let card;if(t===0&&i===0){const tt=h[p].filter(c=>c.suit===trumpSuit).sort((a,b)=>b.rank-a.rank);card=tt.length?tt[0]:h[p][0]}else{const isDef=teamOf(p)!==teamOf(bidder);if(isDef&&PITCH_MODEL){card=nnPlay(p,h[p],tc,trumpSuit,{tricks},bidder)}else{card=heuristicPlay(p,h[p],tc,trumpSuit,{tricks},bidder)}const lg=legalPlays(h[p],tc,trumpSuit);if(!lg.some(c=>c.eq(card)))card=lg[0]}h[p]=h[p].filter(c=>!c.eq(card));tc.push({player:p,card})}const w=trickWinner(tc,trumpSuit);tricks.push({cards:tc,winner:w});leader=w}
+  return computeScoring(tricks,trumpSuit);
+}
+
+// ─── MESSAGE HANDLER ───
+self.onmessage = function(e) {
+  const {type, data} = e.data;
+
+  if (type === 'loadModel') { PITCH_MODEL = data; return; }
+
+  if (type === 'bidEV') {
+    const {hand: hRaw, playerIdx, dealer, scores, numSims} = data;
+    const hand = hRaw.map(c => new Card(c.rank, c.suit));
+    const fullDeck = makeDeck();
+    const knownIds = new Set(hand.map(c=>c.id));
+    const remaining = fullDeck.filter(c=>!knownIds.has(c.id));
+    const results = {};
+
+    for (let suit=0; suit<4; suit++) {
+      const strength = handTrumpStrength(hand, suit);
+      if (!strength.trumpCount) { results[suit] = {nope:true, strength}; continue; }
+
+      const dist = [];
+      for (let d=0; d<numSims; d++) {
+        shuffle(remaining);
+        const hands=[null,null,null,null]; hands[playerIdx]=[...hand];
+        let idx=0; for(let p=0;p<4;p++){if(p===playerIdx)continue;hands[p]=remaining.slice(idx,idx+6);idx+=6}
+        const sc = simHandAsBidder(hands, playerIdx, dealer, suit);
+        const mt = teamOf(playerIdx);
+        dist.push({pts: sc.points[mt], allT: sc.tricksWon[mt]>=6});
+      }
+
+      const total=dist.length; const bidLevels={};
+      const avgPts=dist.reduce((s,d)=>s+d.pts,0)/total;
+      for(let b=2;b<=5;b++){
+        const madeArr=b===5?dist.filter(d=>d.allT):dist.filter(d=>d.pts>=b);
+        const made=madeArr.length;
+        const pMake=made/total;
+        const avgWhenMade=b===5?5:(made>0?madeArr.reduce((s,d)=>s+d.pts,0)/made:0);
+        const ev=pMake*avgWhenMade-(1-pMake)*b;
+        bidLevels[b]={pMake:Math.round(pMake*1000)/1000,ev:Math.round(ev*1000)/1000,avgPts:Math.round(avgPts*100)/100};
+      }
+      let bb=0,be=-999;for(let b=5;b>=2;b--)if(bidLevels[b].ev>0&&(b>bb)){bb=b;be=bidLevels[b].ev}
+      results[suit]={bidLevels,bestBid:bb,bestEV:Math.round(be*1000)/1000,strength};
+    }
+
+    // Blocking analysis - improved
+    // Block % = P(block or force set | opponent would bid)
+    const blockN=Math.min(numSims,500);const mt=teamOf(playerIdx);
+    for(let suit=0;suit<4;suit++){
+      if(results[suit].nope)continue;
+      for(let b=2;b<=5;b++){
+        let blocked=0,owb=0;
+        for(let d=0;d<blockN;d++){
+          shuffle(remaining);
+          const bh=[null,null,null,null];bh[playerIdx]=[...hand];
+          let ix=0;for(let p=0;p<4;p++){if(p===playerIdx)continue;bh[p]=remaining.slice(ix,ix+6);ix+=6}
+          // Pass scenario
+          const pb=new BidState(dealer);for(const p of pb.biddingOrder()){if(p===playerIdx){pb.placeBid(p,0);continue}let bid=heuristicBid(p,bh[p],pb,scores);if(!pb.legalBids(p).includes(bid))bid=0;pb.placeBid(p,bid)}
+          if(pb.currentBidder!==null&&teamOf(pb.currentBidder)!==mt&&pb.currentBid>0){
+            owb++;
+            // Bid scenario (with legality check)
+            const ob=new BidState(dealer);
+            for(const p of ob.biddingOrder()){
+              if(p===playerIdx){const lg=ob.legalBids(p);if(lg.includes(b))ob.placeBid(p,b);else ob.placeBid(p,0);continue}
+              let bid2=heuristicBid(p,bh[p],ob,scores);if(!ob.legalBids(p).includes(bid2))bid2=0;ob.placeBid(p,bid2)
+            }
+            if(ob.currentBidder!==null){
+              const bw=ob.currentBidder,bt=teamOf(bw);
+              if(bt===mt){blocked++}
+              else{
+                // Opponent won (steal/overbid) - simulate to check if they get set
+                let bs2=0,bv2=-1;for(let os=0;os<4;os++){const st=handTrumpStrength(bh[bw],os);const ep=estimatePoints(st);if(ep>bv2){bv2=ep;bs2=os}}
+                const sc2=simHandAsBidder(bh,bw,dealer,bs2);
+                const op=sc2.points[bt],oat=sc2.tricksWon[bt]>=6;
+                const om=ob.currentBid===5?oat:(op>=ob.currentBid);
+                if(!om)blocked++;
+              }
+            }
+          }
+        }
+        const bOpp=blockN>0?owb/blockN:0;
+        const br=owb>0?blocked/owb:0;
+        results[suit].bidLevels[b].blockRate=Math.round(br*1000)/1000;
+        results[suit].bidLevels[b].adjEV=Math.round((results[suit].bidLevels[b].ev+bOpp*br*1.5*.5)*1000)/1000;
+      }
+      let bpb=0,bpe=-999;for(let b=5;b>=2;b--){const a=results[suit].bidLevels[b].adjEV;if(a>0&&b>bpb){bpb=b;bpe=a}}
+      if(bpb===0){for(let b=2;b<=5;b++){const a=results[suit].bidLevels[b].adjEV;if(a>bpe){bpe=a;bpb=b}}}
+      results[suit].bestPosBid=bpb;results[suit].bestPosEV=Math.round(bpe*1000)/1000;
+    }
+
+    self.postMessage({type:'bidEV', results});
+  }
+
+  if (type === 'cardPlay') {
+    const {hand: hRaw, playerIdx, trickCards: tcRaw, trump, gameState: gsRaw, numSims, bidder} = data;
+    const hand = hRaw.map(c=>new Card(c.rank,c.suit));
+    const trickCards = tcRaw.map(tc=>({player:tc.player,card:new Card(tc.card.rank,tc.card.suit)}));
+    const gs = {tricks:(gsRaw.tricks||[]).map(t=>({cards:t.cards.map(tc=>({player:tc.player,card:new Card(tc.card.rank,tc.card.suit)}))}))};
+
+    const legal = legalPlays(hand, trickCards, trump);
+    if(legal.length<=1){self.postMessage({type:'cardPlay',results:legal.map(c=>({rank:c.rank,suit:c.suit,ev:0,pWin:0}))});return}
+
+    const knownIds=new Set(hand.map(c=>c.id));
+    for(const t of gs.tricks)for(const tc of t.cards)knownIds.add(new Card(tc.card.rank,tc.card.suit).id);
+    for(const tc of trickCards)knownIds.add(tc.card.id);
+    const remaining=makeDeck().filter(c=>!knownIds.has(c.id));
+    const tp=(gs.tricks||[]).length;const cpp=6-tp;
+    const pp=new Set(trickCards.map(tc=>tc.player));pp.add(playerIdx);
+
+    // Track voids from trick history
+    // Rules: if trump led and player didn't play trump → void in trump
+    // If non-trump led and player played off-suit non-trump → void in led suit AND trump
+    // If non-trump led and player played trump → they CHOSE to trump in (can't infer void)
+    const voids=[new Set(),new Set(),new Set(),new Set()];
+    function detectVoids(cards){
+      if(!cards.length)return;
+      const ledSuit=cards[0].card.suit;
+      for(let i=1;i<cards.length;i++){
+        const tc=cards[i];
+        if(ledSuit===trump){
+          // Trump led: if didn't play trump, void in trump
+          if(tc.card.suit!==trump)voids[tc.player].add(trump);
+        }else{
+          // Non-trump led
+          if(tc.card.suit!==ledSuit&&tc.card.suit!==trump){
+            // Played off-suit non-trump: void in both led suit and trump
+            voids[tc.player].add(ledSuit);
+            voids[tc.player].add(trump);
+          }
+          // If they played trump, they chose to trump in - no void inference
+          // (they might still have cards of led suit)
+        }
+      }
+    }
+    for(const t of gs.tricks)detectVoids(t.cards);
+    if(trickCards.length>0)detectVoids(trickCards);
+
+    const res=[];
+    for(const card of legal){
+      let totalPts=0,wins=0;
+      for(let sim=0;sim<numSims;sim++){
+        shuffle(remaining);
+        const sH=[null,null,null,null];sH[playerIdx]=hand.filter(c=>!c.eq(card));
+        // Deal remaining cards respecting voids
+        const pNeed=[];for(let p=0;p<4;p++){if(p===playerIdx){pNeed.push(0);continue}let nc=cpp;if(pp.has(p))nc=Math.max(0,nc-1);pNeed.push(nc);sH[p]=[]}
+        for(const rc of remaining){
+          // Find eligible players who need cards and aren't void in this suit
+          const eligible=[];
+          for(let p=0;p<4;p++){if(p===playerIdx||sH[p].length>=pNeed[p])continue;if(!voids[p].has(rc.suit))eligible.push(p)}
+          if(eligible.length){const p=eligible[Math.floor(Math.random()*eligible.length)];sH[p].push(rc)}
+          else{// fallback: give to anyone who needs cards
+            const fb=[];for(let p=0;p<4;p++){if(p===playerIdx||sH[p].length>=pNeed[p])continue;fb.push(p)}
+            if(fb.length){const p=fb[Math.floor(Math.random()*fb.length)];sH[p].push(rc)}}
+        }
+        const sT=[...trickCards,{player:playerIdx,card}];
+        const fp=trickCards.length>0?trickCards[0].player:playerIdx;
+        for(let i=sT.length;i<4;i++){const p=(fp+i)%4;if(sH[p]&&sH[p].length){const isDef=teamOf(p)!==teamOf(bidder);const ac=(isDef&&PITCH_MODEL)?nnPlay(p,sH[p],sT,trump,gs,bidder):heuristicPlay(p,sH[p],sT,trump,gs,bidder);const lg=legalPlays(sH[p],sT,trump);const pc=lg.some(c=>c.eq(ac))?ac:lg[0];sH[p]=sH[p].filter(c=>!c.eq(pc));sT.push({player:p,card:pc})}}
+        const tw=trickWinner(sT,trump);const tricks=[...gs.tricks,{cards:sT,winner:tw}];let leader=tw;
+        for(let t=0;t<6-tp-1;t++){const tc=[];for(let i=0;i<4;i++){const p=(leader+i)%4;if(!sH[p]||!sH[p].length)continue;const isDef2=teamOf(p)!==teamOf(bidder);const ac=(isDef2&&PITCH_MODEL)?nnPlay(p,sH[p],tc,trump,{tricks},bidder):heuristicPlay(p,sH[p],tc,trump,{tricks},bidder);const lg=legalPlays(sH[p],tc,trump);const pc=lg.some(c=>c.eq(ac))?ac:lg[0];sH[p]=sH[p].filter(c=>!c.eq(pc));tc.push({player:p,card:pc})}if(tc.length>=2){const w=trickWinner(tc,trump);tricks.push({cards:tc,winner:w});leader=w}}
+        const sc=computeScoring(tricks,trump);totalPts+=sc.points[teamOf(playerIdx)];if(teamOf(tw)===teamOf(playerIdx))wins++
+      }
+      res.push({rank:card.rank,suit:card.suit,ev:Math.round((totalPts/numSims)*1000)/1000,pWin:Math.round(wins/numSims*100)});
+    }
+    res.sort((a,b)=>b.ev-a.ev);
+    self.postMessage({type:'cardPlay',results:res});
+  }
+};
+`;
+
+let mcWorker = null;
+let workerCallbacks = {};
+let workerIdCounter = 0;
+
+function initWorker() {
+  if (mcWorker) mcWorker.terminate();
+  const blob = new Blob([WORKER_SRC], {type: 'application/javascript'});
+  mcWorker = new Worker(URL.createObjectURL(blob));
+  mcWorker.onmessage = function(e) {
+    const {type, results} = e.data;
+    if (workerCallbacks[type]) {
+      workerCallbacks[type](results);
+      delete workerCallbacks[type];
+    }
+  };
+}
+
+function runMCBidEV(hand, playerIdx, dealer, scores, numSims) {
+  return new Promise(resolve => {
+    workerCallbacks['bidEV'] = resolve;
+    mcWorker.postMessage({type:'bidEV', data:{
+      hand: hand.map(c=>({rank:c.rank,suit:c.suit})),
+      playerIdx, dealer, scores, numSims
+    }});
+  });
+}
+
+function runMCCardPlay(hand, playerIdx, trickCards, trump, gameState, numSims, bidder) {
+  return new Promise(resolve => {
+    workerCallbacks['cardPlay'] = resolve;
+    mcWorker.postMessage({type:'cardPlay', data:{
+      hand: hand.map(c=>({rank:c.rank,suit:c.suit})),
+      playerIdx, trump, numSims, bidder,
+      trickCards: trickCards.map(tc=>({player:tc.player,card:{rank:tc.card.rank,suit:tc.card.suit}})),
+      gameState: {tricks:(gameState.tricks||[]).map(t=>({cards:t.cards.map(tc=>({player:tc.player,card:{rank:tc.card.rank,suit:tc.card.suit}}))}))}
+    }});
+  });
+}
+
+// ══════════════════════════════════════════
+// SOLVER UI RENDERING (compact)
+// ══════════════════════════════════════════
+
+function renderBidSolverPanel(results) {
+  const panel = document.getElementById('solver-panel');
+  if (!SOLVER_ON) { panel.classList.remove('show'); return; }
+
+  // Find best suit: highest aggressive bid with +EV
+  let overallBest = -1, overallBestBid = 0, overallBestEV = -999;
+  for (let s = 0; s < 4; s++) {
+    if (results[s].nope) continue;
+    const rb = results[s].bestPosBid || results[s].bestBid || 0;
+    const rev = results[s].bestPosEV || results[s].bestEV || 0;
+    if (rb > overallBestBid || (rb === overallBestBid && rev > overallBestEV)) {
+      overallBest = s; overallBestBid = rb; overallBestEV = rev;
+    }
+  }
+
+  const suitOrder = [0,1,2,3].sort((a,b) => {
+    const ab = results[a].nope ? 0 : (results[a].bestPosBid || results[a].bestBid || 0);
+    const bb2 = results[b].nope ? 0 : (results[b].bestPosBid || results[b].bestBid || 0);
+    if (ab !== bb2) return bb2 - ab;
+    const ae = results[a].nope ? -999 : (results[a].bestPosEV || results[a].bestEV || 0);
+    const be = results[b].nope ? -999 : (results[b].bestPosEV || results[b].bestEV || 0);
+    return be - ae;
+  });
+
+  let h = `<div class="drag-handle" onmousedown="startDragSolver(event)"><span class="grip">⋮⋮ drag</span><select class="sim-sel" onmousedown="event.stopPropagation()" onchange="NUM_SIMS=+this.value;document.querySelectorAll('.sim-sel').forEach(s=>s.value=NUM_SIMS);rerunSolver()">${[5000,10000,20000,50000,100000].map(v=>`<option value="${v}"${v===NUM_SIMS?' selected':''}>${(v/1000)+'k'}</option>`).join('')}</select></div>`;
+  const defLabel = NN_LOADED ? '<span style="color:#4caf50">NN</span>' : '<span style="color:#ff9800">Heur</span>';
+  h += `<h3>BID ANALYSIS <span style="font-size:8px;opacity:0.4;font-weight:400">${NUM_SIMS.toLocaleString()} sims · ${defLabel}</span></h3>`;
+
+  for (const suit of suitOrder) {
+    const r = results[suit];
+    const isRed = suit === 1 || suit === 2;
+    const isBest = suit === overallBest;
+
+    if (r.nope) {
+      h += `<div class="solver-no-trump"><span class="si ${isRed?'red':'black'}">${SUIT_SYMBOLS[suit]}</span> ${SUIT_NAMES[suit]} — none</div>`;
+      continue;
+    }
+
+    const tcStr = r.strength.trumpCards.map(c => {
+      const rn = {14:'A',13:'K',12:'Q',11:'J',10:'10'}; return (rn[c.rank]||c.rank);
+    }).join(' ');
+
+    h += `<div class="solver-suit-block ${isBest?'best-suit':''}">`;
+    h += `<div class="solver-suit-hdr"><span class="si ${isRed?'red':'black'}">${SUIT_SYMBOLS[suit]}</span>${SUIT_NAMES[suit]} <span class="tc">${r.strength.trumpCount}t: ${tcStr}</span></div>`;
+
+    for (let b = 2; b <= 5; b++) {
+      const d = r.bidLevels[b];
+      const bestB = r.bestPosBid || r.bestBid;
+      const isBB = b === bestB && isBest;
+      const ev = d.adjEV !== undefined ? d.adjEV : d.ev;
+      const evc = ev > 0 ? 'ev-pos' : ev < 0 ? 'ev-neg' : 'ev-zero';
+      h += `<div class="solver-bid-line ${isBB?'best-line':''}">`;
+      h += `<span class="bl">Bid ${b}</span>`;
+      h += `<span class="bp">${Math.round(d.pMake*100)}%</span>`;
+      h += `<span class="be ${evc}">${ev>=0?'+':''}${ev.toFixed(2)}${isBB?' ★':''}</span>`;
+      h += `</div>`;
+    }
+    h += `</div>`;
+  }
+
+  if (overallBest >= 0 && overallBestEV > 0) {
+    const r = results[overallBest];
+    const bid = r.bestPosBid || r.bestBid;
+    h += `<div class="solver-rec">Bid ${bid} ${SUIT_SYMBOLS[overallBest]} ${SUIT_NAMES[overallBest]}<br>EV: ${overallBestEV>=0?'+':''}${overallBestEV.toFixed(2)}</div>`;
+  } else {
+    h += `<div class="solver-rec" style="color:#ef5350">PASS<br>No profitable bid</div>`;
+  }
+
+  panel.innerHTML = h;
+  panel.classList.add('show');
+}
+
+function renderPlaySolverPanel(playResults, trump) {
+  const panel = document.getElementById('solver-panel');
+  if (!SOLVER_ON) { panel.classList.remove('show'); return; }
+  const maxEV = Math.max(...playResults.map(r => Math.abs(r.ev)), 0.01);
+  const RN = {2:'2',3:'3',4:'4',5:'5',6:'6',7:'7',8:'8',9:'9',10:'10',11:'J',12:'Q',13:'K',14:'A'};
+
+  let h = `<div class="drag-handle" onmousedown="startDragSolver(event)"><span class="grip">⋮⋮ drag</span><select class="sim-sel" onmousedown="event.stopPropagation()" onchange="NUM_SIMS=+this.value;document.querySelectorAll('.sim-sel').forEach(s=>s.value=NUM_SIMS);rerunSolver()">${[5000,10000,20000,50000,100000].map(v=>`<option value="${v}"${v===NUM_SIMS?' selected':''}>${(v/1000)+'k'}</option>`).join('')}</select></div>`;
+  const bestEV = playResults.length > 0 ? playResults[0].ev : 0;
+  const maxDelta = Math.max(...playResults.map(r => Math.abs(r.ev - bestEV)), 0.01);
+  const defLabel2 = NN_LOADED ? '<span style="color:#4caf50">NN</span>' : '<span style="color:#ff9800">Heur</span>';
+  h += `<h3>PLAY <span style="font-size:8px;opacity:0.4;font-weight:400">${SUIT_SYMBOLS[trump]} ${NUM_SIMS.toLocaleString()}s · ${defLabel2}</span></h3>`;
+  playResults.forEach((r, i) => {
+    const isRed = r.suit === 1 || r.suit === 2;
+    const delta = r.ev - bestEV;
+    const evc = delta === 0 ? 'ev-pos' : 'ev-neg';
+    const bw = i === 0 ? 100 : Math.max(0, Math.round((1 - Math.abs(delta) / maxDelta) * 100));
+    const nm = (RN[r.rank]||r.rank) + SUIT_SYMBOLS[r.suit];
+    const evStr = i === 0 ? `BEST (${r.ev>=0?'+':''}${r.ev.toFixed(2)})` : delta.toFixed(2);
+    h += `<div class="play-row">`;
+    h += `<span class="cm ${isRed?'red':'black'}">${nm}${i===0?' ★':''}</span>`;
+    h += `<span><span class="play-ev-bar"><span class="play-ev-bar-fill ${i===0?'positive':'negative'}" style="width:${bw}%"></span></span></span>`;
+    h += `<span class="${evc}" style="font-weight:600;font-size:9px">${evStr}</span>`;
+    h += `</div>`;
+  });
+  panel.innerHTML = h;
+  panel.classList.add('show');
+}
+
+function showSolverLoading(msg) {
+  if (!SOLVER_ON) return;
+  const panel = document.getElementById('solver-panel');
+  panel.innerHTML = `<h3>${msg} <span class="spinner"></span></h3>`;
+  panel.classList.add('show');
+}
+
+function hideSolverPanel() { document.getElementById('solver-panel').classList.remove('show'); resetSolverPosition(); }
+
+function resetSolverPosition() {
+  const panel = document.getElementById('solver-panel');
+  panel.style.position = '';
+  panel.style.top = '';
+  panel.style.left = '';
+  panel.style.right = '';
+  panel.style.bottom = '';
+}
+function startDragSolver(e) {
+  e.preventDefault();
+  const panel = document.getElementById('solver-panel');
+  const rect = panel.getBoundingClientRect();
+  const offX = e.clientX - rect.left;
+  const offY = e.clientY - rect.top;
+  panel.style.position = 'fixed';
+  panel.style.right = 'auto';
+  panel.style.bottom = 'auto';
+  panel.style.left = rect.left + 'px';
+  panel.style.top = rect.top + 'px';
+  function onMove(ev) {
+    panel.style.left = Math.max(0, Math.min(window.innerWidth - 50, ev.clientX - offX)) + 'px';
+    panel.style.top = Math.max(0, Math.min(window.innerHeight - 50, ev.clientY - offY)) + 'px';
+  }
+  function onUp() {
+    document.removeEventListener('mousemove', onMove);
+    document.removeEventListener('mouseup', onUp);
+  }
+  document.addEventListener('mousemove', onMove);
+  document.addEventListener('mouseup', onUp);
+}
+
+async function rerunSolver() {
+  if (!SOLVER_ON || !G.hands || !G.hands[0]) return;
+  const panel = document.getElementById('solver-panel');
+  if (!panel.classList.contains('show')) return;
+  // Determine if we're in bid or play phase
+  if (G.trump === null || G.trump === undefined) {
+    // Bid phase - re-run bid analysis
+    showSolverLoading('Re-analyzing bids...');
+    const bidResults = await runMCBidEV(G.hands[0], 0, G.dealer, G.scores, NUM_SIMS);
+    renderBidSolverPanel(bidResults);
+  } else if (G.currentTrick !== undefined) {
+    // Play phase - re-run card play analysis
+    const legal = legalPlays(G.hands[0], G.currentTrick, G.trump);
+    if (legal.length > 1) {
+      showSolverLoading('Re-evaluating plays...');
+      const r = await runMCCardPlay(G.hands[0], 0, G.currentTrick, G.trump, {tricks:G.tricks}, NUM_SIMS, G.bidder);
+      renderPlaySolverPanel(r, G.trump);
+    }
+  }
+}
+
+function toggleSolver() {
+  SOLVER_ON = !SOLVER_ON;
+  const btn = document.getElementById('solver-toggle');
+  btn.textContent = `Solver ${SOLVER_ON ? 'ON' : 'OFF'}`;
+  btn.classList.toggle('active', SOLVER_ON);
+  if (!SOLVER_ON) hideSolverPanel();
+}
+
+function toggleShowCards() {
+  SHOW_ALL_CARDS = !SHOW_ALL_CARDS;
+  const btn = document.getElementById('show-cards-btn');
+  btn.classList.toggle('active', SHOW_ALL_CARDS);
+  document.getElementById('solver-panel').classList.toggle('compact', SHOW_ALL_CARDS);
+  renderAllHands();
+}
+
+// ══════════════════════════════════════════
+// GAME UI CONTROLLER
+// ══════════════════════════════════════════
+
+const POSITIONS = ['south','west','north','east'];
+const PLAYER_NAMES = ['You','West','Partner','East'];
+let G = {};
+let SPEED = 400;
+let trickHistory = []; // stack of snapshots for trick-by-trick undo
+let playResolveCancel = null; // to cancel pending human input on undo
+let gameGeneration = 0; // generation counter to prevent stale async flows
+
+function delay(ms) { return new Promise(r => setTimeout(r, ms || SPEED)); }
+
+// ── GAME LOGGER (captures human decisions for NN training) ──
+const GameLog = {
+  games: [],
+  currentHand: null,
+  totalDecisions: 0,
+
+  startHand(dealer, hands, scores) {
+    this.currentHand = {
+      dealer: dealer,
+      bidder: null, bid_level: null, trump_suit: null,
+      team_scores: [scores[0], scores[1]],
+      initial_hands: hands.map(h => h.map(c => [c.rank, c.suit])),
+      decisions: [],
+      outcome: null
+    };
+  },
+
+  logDecision(player, card, trickNum, trickPos, hands, currentTrick, tricks, trump, leader, scores) {
+    if (!this.currentHand || player !== 0) return;
+    const capInfo = this._computeCaptured(tricks, trump);
+    const allPlayed = this._getAllPlayedCards(tricks, currentTrick);
+    this.currentHand.decisions.push({
+      player: player,
+      trick_num: trickNum,
+      trick_pos: trickPos,
+      card_played: [card.rank, card.suit],
+      hands: hands.map(h => h.map(c => [c.rank, c.suit])),
+      led_suit: currentTrick.length > 0 ? currentTrick[0].card.suit : null,
+      trick_cards: currentTrick.map(tc => [tc.card.rank, tc.card.suit]),
+      trick_players: currentTrick.map(tc => tc.player),
+      all_played_cards: allPlayed,
+      captured_by_team: capInfo.captured,
+      tricks_won: capInfo.tricksWon,
+      team_scores: [scores[0], scores[1]],
+      leader: leader,
+      partner_info: this._buildPartnerInfo(tricks, trump),
+      bidder_info: this._buildBidderInfo(tricks, trump, this.currentHand.bidder)
+    });
+    this.totalDecisions++;
+    this._updateCounter();
+  },
+
+  logBid(player, bid, hand, dealer, bidState, scores) {
+    if (!this.currentHand || player !== 0) return;
+    if (!this.currentHand.bids) this.currentHand.bids = [];
+    this.currentHand.bids.push({
+      player: player,
+      bid: bid,
+      hand: hand.map(c => [c.rank, c.suit]),
+      dealer: dealer,
+      is_dealer: player === dealer,
+      current_highest_bid: bidState.currentBid,
+      current_bidder: bidState.currentBidder,
+      bids_so_far: bidState.bids.map(b => ({player: b.player, bid: b.bid})),
+      team_scores: [scores[0], scores[1]]
+    });
+    this.totalDecisions++;
+    this._updateCounter();
+  },
+
+  finishHand(scoring, bidder, bidAmount, trump) {
+    if (!this.currentHand) return;
+    // Allow hands with only bids (no card decisions) to be saved too
+    if (this.currentHand.decisions.length === 0 && (!this.currentHand.bids || this.currentHand.bids.length === 0)) {
+      this.currentHand = null; return;
+    }
+    const bt = teamOf(bidder);
+    this.currentHand.bidder = bidder;
+    this.currentHand.bid_level = bidAmount;
+    this.currentHand.trump_suit = trump;
+    this.currentHand.outcome = {
+      bidder_pts: scoring.points[bt],
+      jack_captured: scoring.jackCaptured && scoring.jackTeam === bt,
+      low_captured: scoring.lowTeam !== null && scoring.lowTeam === bt
+    };
+    this.games.push(this.currentHand);
+    this.currentHand = null;
+    this._updateCounter();
+  },
+
+  exportJSON() {
+    if (this.totalDecisions === 0) { alert('No decisions logged yet. Play some hands first!'); return; }
+    const data = {
+      version: '7.6',
+      exported_at: new Date().toISOString(),
+      hands_played: this.games.length,
+      total_decisions: this.totalDecisions,
+      games: this.games
+    };
+    const json = JSON.stringify(data);
+    const blob = new Blob([json], {type: 'application/json;charset=utf-8'});
+    const fname = `human_gameplay_${Date.now()}.json`;
+    // Use msSaveBlob for Edge/IE, otherwise create a link
+    if (navigator.msSaveBlob) { navigator.msSaveBlob(blob, fname); return; }
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = fname;
+    a.type = 'application/json';
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  },
+
+  clear() {
+    this.games = []; this.totalDecisions = 0; this.currentHand = null;
+    this._updateCounter();
+  },
+
+  _updateCounter() {
+    const el = document.getElementById('log-counter');
+    if (el) el.textContent = `${this.totalDecisions} logged`;
+  },
+
+  _computeCaptured(tricks, trump) {
+    const cap = {0: [], 1: []}, tw = {0: 0, 1: 0};
+    for (const trick of tricks) {
+      const w = trickWinner(trick.cards, trump), tm = teamOf(w);
+      tw[tm]++;
+      for (const tc of trick.cards) cap[tm].push([tc.card.rank, tc.card.suit]);
+    }
+    return { captured: cap, tricksWon: tw };
+  },
+
+  _getAllPlayedCards(tricks, currentTrick) {
+    const cards = [];
+    for (const trick of tricks) for (const tc of trick.cards) cards.push([tc.card.rank, tc.card.suit]);
+    for (const tc of currentTrick) cards.push([tc.card.rank, tc.card.suit]);
+    return cards;
+  },
+
+  _buildPartnerInfo(tricks, trump) {
+    const info = {};
+    for (let p = 0; p < 4; p++) info[p] = { highest_trump_played: -1, shown_void: [], gp_on_winning: 0 };
+    if (trump === null) return info;
+    for (const trick of tricks) {
+      const w = trickWinner(trick.cards, trump), ls = trick.cards[0].card.suit;
+      for (let idx = 0; idx < trick.cards.length; idx++) {
+        const tc = trick.cards[idx];
+        if (tc.card.suit === trump && tc.card.rank > info[tc.player].highest_trump_played)
+          info[tc.player].highest_trump_played = tc.card.rank;
+        if (idx > 0 && tc.card.suit !== ls && ls !== trump && tc.card.suit !== trump)
+          if (!info[tc.player].shown_void.includes(ls)) info[tc.player].shown_void.push(ls);
+        if (teamOf(tc.player) === teamOf(w) && tc.player !== w)
+          info[tc.player].gp_on_winning += tc.card.gamePoints;
+      }
+    }
+    return info;
+  },
+
+  _buildBidderInfo(tricks, trump, bidder) {
+    const info = { trump_leads: 0, consecutive_trump_leads: 0, shown_A: false, shown_K: false,
+      shown_Q: false, shown_J: false, highest_trump: -1, offsuit_leads: 0,
+      strategy_switch: false, stopped_leading_trump: false };
+    if (bidder === null || trump === null) return info;
+    let lastWasTrumpLead = false;
+    for (const trick of tricks) {
+      const ld = trick.cards[0].player;
+      if (ld === bidder) {
+        if (trick.cards[0].card.suit === trump) {
+          info.trump_leads++; info.consecutive_trump_leads++; lastWasTrumpLead = true;
+        } else {
+          info.offsuit_leads++;
+          if (lastWasTrumpLead && info.trump_leads > 0) { info.stopped_leading_trump = true; info.strategy_switch = true; }
+          info.consecutive_trump_leads = 0; lastWasTrumpLead = false;
+        }
+      }
+      for (const tc of trick.cards) {
+        if (tc.player === bidder && tc.card.suit === trump) {
+          if (tc.card.rank > info.highest_trump) info.highest_trump = tc.card.rank;
+          if (tc.card.rank === 14) info.shown_A = true;
+          if (tc.card.rank === 13) info.shown_K = true;
+          if (tc.card.rank === 12) info.shown_Q = true;
+          if (tc.card.rank === 11) info.shown_J = true;
+        }
+      }
+    }
+    return info;
+  }
+};
+
+function newGame() {
+  G = { scores:{0:0,1:0}, dealer:Math.floor(Math.random()*4), handNum:0, hands:null, bidState:null, trump:null, tricks:[], currentTrick:[], leader:null, bidder:null, bidAmount:0 };
+  trickHistory = [];
+  GameLog.currentHand = null;
+  document.getElementById('game-over').classList.remove('show');
+  document.getElementById('hand-result').classList.remove('show');
+  hideSolverPanel();
+  clearLog();
+  updateScoreboard();
+  updateBackBtn();
+  initWorker();
+  startHand();
+}
+
+function goBack() {
+  if (trickHistory.length === 0) return;
+  // The top snapshot is always the start of the CURRENT trick/phase.
+  // Pop it to discard current position, then use the one beneath it
+  // (which is the start of the previous trick = one more card in hand).
+  // If there's only one snapshot left, use that one.
+  let snap = trickHistory.pop();
+  if (snap.type === 'trick' && trickHistory.length > 0) {
+    snap = trickHistory.pop();
+  }
+  gameGeneration++;
+  GameLog.currentHand = null; // Discard partial hand data on undo
+  // Cancel any pending human input
+  if (playResolveCancel) { playResolveCancel(); playResolveCancel = null; }
+  if (bidResolveCancel) { bidResolveCancel(); bidResolveCancel = null; }
+  // Restore full game state
+  G.hands = snap.hands.map(h => h.map(c => new Card(c.rank, c.suit)));
+  G.tricks = snap.tricks.map(t => ({cards: t.cards.map(tc => ({player: tc.player, card: new Card(tc.card.rank, tc.card.suit)}))}));
+  G.currentTrick = [];
+  G.leader = snap.leader;
+  G.trump = snap.trump;
+  G.bidder = snap.bidder;
+  G.bidAmount = snap.bidAmount;
+  G.scores = {...snap.scores};
+  G.dealer = snap.dealer;
+  G.handNum = snap.handNum;
+  document.getElementById('hand-result').classList.remove('show');
+  document.getElementById('bid-panel').classList.remove('show');
+  document.getElementById('game-over').classList.remove('show');
+  clearTrickArea(); clearBidBubbles(); hideSolverPanel();
+  updateScoreboard(); updateLabels(); renderAllHands();
+  if (G.trump !== null) { showTrump(G.trump); } else { document.getElementById('trump-indicator').classList.add('hidden'); }
+  updateBackBtn();
+  const gen = gameGeneration;
+  if (snap.type === 'hand') {
+    // Going back to start of hand — restart from bidding
+    setTimeout(() => {
+      if (gen !== gameGeneration) return;
+      resumeFromBidding(gen);
+    }, 150);
+  } else {
+    // Going back to start of a trick — resume play
+    setTimeout(() => {
+      if (gen !== gameGeneration) return;
+      resumeFromTrick(snap.trickNum, gen);
+    }, 150);
+  }
+}
+
+async function resumeFromBidding(gen) {
+  await doBidding(gen);
+  if (gen !== gameGeneration) return;
+  G.leader = G.bidder;
+  for (let t = 0; t < 6; t++) {
+    if (gen !== gameGeneration) return;
+    saveTrickSnapshot(t);
+    await doTrick(t, gen);
+  }
+  if (gen !== gameGeneration) return;
+  showHandResult(computeScoring(G.tricks, G.trump));
+}
+
+async function resumeFromTrick(fromTrick, gen) {
+  for (let t = fromTrick; t < 6; t++) {
+    if (gen !== gameGeneration) return;
+    saveTrickSnapshot(t);
+    await doTrick(t, gen);
+  }
+  if (gen !== gameGeneration) return;
+  showHandResult(computeScoring(G.tricks, G.trump));
+}
+
+function saveTrickSnapshot(trickNum) {
+  trickHistory.push({
+    type: 'trick',
+    hands: G.hands.map(h => h.map(c => ({rank:c.rank, suit:c.suit}))),
+    tricks: G.tricks.map(t => ({cards: t.cards.map(tc => ({player:tc.player, card:{rank:tc.card.rank, suit:tc.card.suit}}))})),
+    leader: G.leader,
+    trump: G.trump,
+    bidder: G.bidder,
+    bidAmount: G.bidAmount,
+    scores: {...G.scores},
+    dealer: G.dealer,
+    handNum: G.handNum,
+    trickNum: trickNum
+  });
+  updateBackBtn();
+}
+
+function saveHandSnapshot() {
+  // Keep max ~3 hands worth of history (21 snapshots) to avoid memory growth
+  while (trickHistory.length > 21) trickHistory.shift();
+  trickHistory.push({
+    type: 'hand',
+    hands: G.hands.map(h => h.map(c => ({rank:c.rank, suit:c.suit}))),
+    tricks: [],
+    leader: null,
+    trump: null,
+    bidder: null,
+    bidAmount: 0,
+    scores: {...G.scores},
+    dealer: G.dealer,
+    handNum: G.handNum,
+    trickNum: 0
+  });
+  updateBackBtn();
+}
+
+function updateBackBtn() {
+  const btn = document.getElementById('back-btn');
+  if (btn) { btn.disabled = trickHistory.length === 0; btn.style.opacity = trickHistory.length === 0 ? '0.4' : '1'; }
+}
+
+async function startHand() {
+  gameGeneration++;
+  const gen = gameGeneration;
+  G.abortHand = false;
+  G.handNum++; G.dealer=(G.dealer+1)%4; G.trump=null; G.tricks=[]; G.currentTrick=[]; G.bidder=null; G.bidAmount=0;
+  document.getElementById('hand-result').classList.remove('show');
+  document.getElementById('trump-indicator').classList.add('hidden');
+  document.getElementById('hand-num').textContent = `Hand ${G.handNum}`;
+  clearTrickArea(); clearBidBubbles(); hideSolverPanel(); updateLabels(); updateScoreboard();
+  document.getElementById('hand-south').innerHTML = '';
+  G.hands = dealHands();
+  GameLog.startHand(G.dealer, G.hands, G.scores);
+  saveHandSnapshot();
+  renderAllHands();
+  log(`Hand ${G.handNum} — Dealer: ${PLAYER_NAMES[G.dealer]}`);
+  await delay(SPEED);
+  if (gen !== gameGeneration) return;
+  await doBidding(gen);
+  if (gen !== gameGeneration) return;
+  G.leader = G.bidder;
+  for (let t = 0; t < 6; t++) {
+    if (gen !== gameGeneration) return;
+    saveTrickSnapshot(t); // save state before each trick for undo
+    await doTrick(t, gen);
+  }
+  if (gen !== gameGeneration) return;
+  showHandResult(computeScoring(G.tricks, G.trump));
+}
+
+// ── RENDERING ──
+
+function renderCard(card, faceUp, small, playable, onClick) {
+  const el = document.createElement('div');
+  el.className = `card ${faceUp?'card-front':'card-back'} ${small?'small':''} ${playable?'playable':''} ${faceUp?(card.isRed?'red':'black'):''} dealing`;
+  if (faceUp) {
+    const r = RANK_NAMES[card.rank]||card.rank;
+    const s = SUIT_SYMBOLS[card.suit];
+    el.innerHTML = `<div class="card-tl"><span class="card-rank">${r}</span><span class="card-suit-sm">${s}</span></div><div class="card-center">${s}</div><div class="card-br"><span class="card-rank">${r}</span><span class="card-suit-sm">${s}</span></div>`;
+    el.setAttribute('data-card-id', card.id);
+  }
+  if (onClick) el.addEventListener('click', onClick);
+  return el;
+}
+
+function renderOppHand(containerId, cards, position) {
+  const el = document.getElementById(containerId);
+  if (!cards || cards.length <= 0) { el.innerHTML = ''; return; }
+  const isEW = (position === 'west' || position === 'east');
+
+  if (SHOW_ALL_CARDS) {
+    el.classList.add('opp-hand-open');
+    el.classList.remove('opp-hand-closed');
+    const currentIds = new Set(cards.map(c => c.id));
+    // Remove cards no longer in hand
+    el.querySelectorAll('[data-card-id]').forEach(ce => {
+      if (!currentIds.has(+ce.getAttribute('data-card-id'))) ce.remove();
+    });
+    // Remove any leftover card-back elements
+    el.querySelectorAll('.card-back').forEach(ce => ce.remove());
+    // Check which are already rendered
+    const renderedIds = new Set();
+    el.querySelectorAll('[data-card-id]').forEach(ce => renderedIds.add(+ce.getAttribute('data-card-id')));
+    // Add missing cards
+    cards.forEach(c => {
+      if (!renderedIds.has(c.id)) {
+        const cardEl = renderCard(c, true, true, false, null);
+        cardEl.setAttribute('data-card-id', c.id);
+        if (isEW) cardEl.classList.add('rotated-card');
+        el.appendChild(cardEl);
+      }
+    });
+  } else {
+    el.classList.remove('opp-hand-open');
+    el.classList.add('opp-hand-closed');
+    // Remove any face-up cards
+    el.querySelectorAll('[data-card-id]').forEach(ce => ce.remove());
+    // Update or create single card-back with count
+    let back = el.querySelector('.card-back');
+    if (back) {
+      const cnt = back.querySelector('.card-count');
+      if (cnt) cnt.textContent = cards.length;
+    } else {
+      back = document.createElement('div');
+      back.className = 'card card-back opp-card';
+      if (isEW) back.classList.add('rotated-card');
+      back.innerHTML = `<div class="card-count">${cards.length}</div>`;
+      el.appendChild(back);
+    }
+  }
+}
+
+function renderAllHands(playableCards) {
+  const ps = playableCards ? new Set(playableCards.map(c => c.id)) : new Set();
+  const s = document.getElementById('hand-south');
+  const currentHand = G.hands[0] || [];
+  const currentIds = new Set(currentHand.map(c => c.id));
+
+  // Remove cards no longer in hand (played cards) instead of clearing all
+  const existing = s.querySelectorAll('[data-card-id]');
+  existing.forEach(el => {
+    const cid = +el.getAttribute('data-card-id');
+    if (!currentIds.has(cid)) el.remove();
+  });
+
+  // Check which cards are already rendered
+  const renderedIds = new Set();
+  s.querySelectorAll('[data-card-id]').forEach(el => renderedIds.add(+el.getAttribute('data-card-id')));
+
+  // Update existing cards (playable state) and add missing ones
+  currentHand.forEach(c => {
+    const p = ps.has(c.id);
+    if (renderedIds.has(c.id)) {
+      // Update playable state on existing card
+      const el = s.querySelector(`[data-card-id="${c.id}"]`);
+      if (el) {
+        el.classList.toggle('playable', p);
+        el.onclick = p ? () => humanPlay(c) : null;
+        el.style.cursor = p ? 'pointer' : 'default';
+      }
+    } else {
+      // New card — add it
+      const el = renderCard(c, true, false, p, p ? () => humanPlay(c) : null);
+      el.setAttribute('data-card-id', c.id);
+      s.appendChild(el);
+    }
+  });
+
+  renderOppHand('hand-north', G.hands[2]||[], 'north');
+  renderOppHand('hand-west', G.hands[1]||[], 'west');
+  renderOppHand('hand-east', G.hands[3]||[], 'east');
+}
+
+function updateLabels() {
+  for (let p = 0; p < 4; p++) {
+    const el = document.getElementById(`label-${POSITIONS[p]}`);
+    let html = PLAYER_NAMES[p];
+    if (p === G.dealer) html += ` <span class="dealer-chip">D</span>`;
+    el.innerHTML = html;
+  }
+}
+
+function setActiveTurn(p) {
+  document.querySelectorAll('.player-label').forEach(el => el.classList.remove('active-turn'));
+  if (p !== null) document.getElementById(`label-${POSITIONS[p]}`).classList.add('active-turn');
+}
+
+function updateScoreboard() {
+  document.getElementById('score0').textContent = G.scores[0];
+  document.getElementById('score1').textContent = G.scores[1];
+}
+
+function showTrump(s) {
+  document.getElementById('trump-indicator').classList.remove('hidden');
+  const icon = document.getElementById('trump-suit');
+  icon.textContent = SUIT_SYMBOLS[s];
+  icon.style.color = (s === 1 || s === 2) ? '#ef5350' : '#1a1a1a';
+  icon.style.textShadow = (s === 1 || s === 2) ? '0 0 8px rgba(239,83,80,0.5), 0 2px 6px rgba(0,0,0,0.6)' : '0 0 8px rgba(255,255,255,0.4), 0 2px 6px rgba(0,0,0,0.6)';
+  // Show bidder and bid amount
+  const info = document.getElementById('bidder-info');
+  if (G.bidder !== null && G.bidAmount) {
+    info.textContent = `${PLAYER_NAMES[G.bidder]} bid ${G.bidAmount}`;
+  }
+}
+
+function clearTrickArea() { document.getElementById('trick-area').innerHTML = ''; }
+
+function addCardToTrick(player, card) {
+  const area = document.getElementById('trick-area');
+  const el = document.createElement('div');
+  const pos = POSITIONS[player];
+  el.className = `trick-card pos-${pos} card-enter-${pos}`;
+  el.appendChild(renderCard(card, true, false, false));
+  el.innerHTML += '<div class="winner-glow"></div>';
+  area.appendChild(el);
+  // Trigger animation after reflow
+  requestAnimationFrame(() => requestAnimationFrame(() => {
+    el.classList.remove(`card-enter-${pos}`);
+  }));
+}
+
+function highlightTrickWinner(p) {
+  const el = document.getElementById('trick-area').querySelector(`.pos-${POSITIONS[p]} .winner-glow`);
+  if (el) el.style.display = 'block';
+}
+
+function flyCardsToWinner(winner) {
+  const pos = POSITIONS[winner];
+  document.querySelectorAll('#trick-area .trick-card').forEach(el => {
+    el.classList.add(`fly-to-${pos}`);
+  });
+}
+
+function showBidBubble(p, text) {
+  clearBidBubble(p);
+  const b = document.createElement('div');
+  b.className = `bid-bubble ${POSITIONS[p]}`;
+  b.id = `bid-bubble-${p}`;
+  b.textContent = text;
+  document.getElementById('table').appendChild(b);
+}
+function clearBidBubble(p) { const el = document.getElementById(`bid-bubble-${p}`); if (el) el.remove(); }
+function clearBidBubbles() { document.querySelectorAll('.bid-bubble').forEach(el => el.remove()); }
+
+// ── BIDDING ──
+
+async function doBidding(gen) {
+  G.bidState = new BidState(G.dealer);
+  const order = G.bidState.biddingOrder();
+  for (const player of order) {
+    if (gen !== gameGeneration) return;
+    setActiveTurn(player);
+    await delay(SPEED);
+    if (gen !== gameGeneration) return;
+    let bid;
+    if (player === 0) {
+      if (SOLVER_ON) {
+        showSolverLoading('Analyzing bids...');
+        const bidResults = await runMCBidEV(G.hands[0], 0, G.dealer, G.scores, NUM_SIMS);
+        if (gen !== gameGeneration) return;
+        renderBidSolverPanel(bidResults);
+      }
+      bid = await getHumanBid(G.bidState);
+      if (bid === null || gen !== gameGeneration) return;
+      GameLog.logBid(0, bid, G.hands[0], G.dealer, G.bidState, G.scores);
+    } else {
+      bid = heuristicBid(player, G.hands[player], G.bidState, G.scores);
+      if (!G.bidState.legalBids(player).includes(bid)) bid = 0;
+    }
+    G.bidState.placeBid(player, bid);
+    showBidBubble(player, bid === 0 ? 'Pass' : `Bid ${bid}`);
+    log(`${PLAYER_NAMES[player]}: ${bid === 0 ? 'Pass' : 'Bid ' + bid}`);
+    await delay(SPEED);
+    if (gen !== gameGeneration) return;
+  }
+  G.bidder = G.bidState.currentBidder;
+  G.bidAmount = G.bidState.currentBid;
+  log(`${PLAYER_NAMES[G.bidder]} wins bid at ${G.bidAmount}`, 'highlight');
+  setActiveTurn(null);
+  await delay(SPEED);
+  clearBidBubbles();
+  hideSolverPanel();
+}
+
+function getHumanBid(bs) {
+  return new Promise(resolve => {
+    bidResolveCancel = () => { document.getElementById('bid-panel').classList.remove('show'); resolve(null); };
+    const panel = document.getElementById('bid-panel');
+    const btns = document.getElementById('bid-buttons');
+    btns.innerHTML = '';
+    const legal = bs.legalBids(0);
+    if (legal.includes(0)) {
+      const b = document.createElement('button'); b.className = 'bid-btn pass'; b.textContent = 'Pass';
+      b.onclick = () => { bidResolveCancel=null; panel.classList.remove('show'); resolve(0); }; btns.appendChild(b);
+    }
+    for (const v of legal) {
+      if (v === 0) continue;
+      const b = document.createElement('button'); b.className = 'bid-btn bid-val';
+      b.textContent = (bs.bids.length === 3 && v === bs.currentBid && v > 0) ? `Steal ${v}` : v;
+      b.onclick = () => { bidResolveCancel=null; panel.classList.remove('show'); resolve(v); }; btns.appendChild(b);
+    }
+    panel.classList.add('show');
+  });
+}
+let bidResolveCancel = null;
+
+// ── TRICK PLAY ──
+
+let playResolve = null;
+
+async function doTrick(trickNum, gen) {
+  G.currentTrick = []; clearTrickArea();
+  for (let i = 0; i < 4; i++) {
+    if (gen !== gameGeneration) return;
+    const player = (G.leader + i) % 4;
+    setActiveTurn(player);
+    let card;
+    if (player === 0) {
+      if (trickNum === 0 && i === 0 && G.trump === null) {
+        renderAllHands([...G.hands[0]]);
+        if (SOLVER_ON) {
+          showSolverLoading('Analyzing pitch...');
+          const r = await runMCBidEV(G.hands[0], 0, G.dealer, G.scores, NUM_SIMS);
+          if (gen !== gameGeneration) return;
+          renderBidSolverPanel(r);
+        }
+        card = await getHumanPlay();
+        if (card === null || gen !== gameGeneration) return;
+        G.trump = card.suit;
+        showTrump(G.trump);
+        log(`You pitch ${card.name} — Trump: ${SUIT_SYMBOLS[G.trump]} ${SUIT_NAMES[G.trump]}`, 'highlight');
+        GameLog.logDecision(0, card, trickNum, i, G.hands, G.currentTrick, G.tricks, G.trump, G.leader, G.scores);
+      } else {
+        const legal = legalPlays(G.hands[0], G.currentTrick, G.trump);
+        renderAllHands(legal);
+        if (SOLVER_ON && legal.length > 1) {
+          showSolverLoading('Evaluating plays...');
+          const r = await runMCCardPlay(G.hands[0], 0, G.currentTrick, G.trump, {tricks:G.tricks}, NUM_SIMS, G.bidder);
+          if (gen !== gameGeneration) return;
+          renderPlaySolverPanel(r, G.trump);
+        } else if (SOLVER_ON) { hideSolverPanel(); }
+        card = await getHumanPlay();
+        if (card === null || gen !== gameGeneration) return;
+        GameLog.logDecision(0, card, trickNum, i, G.hands, G.currentTrick, G.tricks, G.trump, G.leader, G.scores);
+      }
+    } else {
+      await delay(SPEED);
+      if (gen !== gameGeneration) return;
+      if (trickNum === 0 && i === 0 && G.trump === null) {
+        card = heuristicPlay(player, G.hands[player], G.currentTrick, null, {tricks: G.tricks}, G.bidder);
+        G.trump = card.suit;
+        showTrump(G.trump);
+        log(`${PLAYER_NAMES[player]} pitches ${card.name} — Trump: ${SUIT_SYMBOLS[G.trump]} ${SUIT_NAMES[G.trump]}`, 'highlight');
+      } else {
+        const legal = legalPlays(G.hands[player], G.currentTrick, G.trump);
+        card = heuristicPlay(player, G.hands[player], G.currentTrick, G.trump, {tricks: G.tricks}, G.bidder);
+        if (!legal.some(c => c.eq(card))) card = legal[0];
+      }
+    }
+    G.hands[player] = G.hands[player].filter(c => !c.eq(card));
+    G.currentTrick.push({player, card});
+    addCardToTrick(player, card);
+    renderAllHands();
+    await delay(SPEED * 0.6);
+    if (gen !== gameGeneration) return;
+  }
+  const winner = trickWinner(G.currentTrick, G.trump);
+  highlightTrickWinner(winner);
+  const tGP = G.currentTrick.reduce((s, tc) => s + tc.card.gamePoints, 0);
+  log(`Trick ${trickNum+1}: ${PLAYER_NAMES[winner]} wins${tGP>0?` (${tGP} game pts)`:''}`);
+  G.tricks.push({cards: [...G.currentTrick]});
+  G.leader = winner;
+  setActiveTurn(null);
+  hideSolverPanel();
+  await delay(SPEED * 0.8);
+  flyCardsToWinner(winner);
+  await delay(SPEED * 0.7);
+  clearTrickArea();
+}
+
+function getHumanPlay() { return new Promise(resolve => { playResolve = resolve; playResolveCancel = () => { playResolve = null; resolve(null); }; }); }
+function humanPlay(card) { if (playResolve) { playResolveCancel = null; const r = playResolve; playResolve = null; renderAllHands(); r(card); } }
+
+// ── HAND RESULT ──
+
+function showHandResult(scoring) {
+  GameLog.finishHand(scoring, G.bidder, G.bidAmount, G.trump);
+  const bt = teamOf(G.bidder);
+  const made = (G.bidAmount < 5) ? (scoring.points[bt] >= G.bidAmount) : (scoring.tricksWon[bt] >= 6);
+  const old = {...G.scores};
+  if (made) G.scores[bt] += (G.bidAmount === 5 ? 5 : scoring.points[bt]); else G.scores[bt] -= G.bidAmount;
+  G.scores[1-bt] += scoring.points[1-bt];
+  updateScoreboard();
+
+  const el = document.getElementById('hand-result');
+  document.getElementById('result-title').textContent = `${PLAYER_NAMES[G.bidder]} bid ${G.bidAmount} — ${made?'MADE ✓':'SET ✗'}`;
+  document.getElementById('result-title').style.color = made ? '#81c784' : '#ef5350';
+
+  const grid = document.getElementById('result-grid');
+  grid.innerHTML = '';
+  [['High', scoring.highTeam!==null?(scoring.high.name+' → '+(scoring.highTeam===0?'You':'Opp')):'—'],
+   ['Low', scoring.lowTeam!==null?(scoring.low.name+' → '+(scoring.lowTeam===0?'You':'Opp')):'—'],
+   ['Jack', scoring.jackCaptured?('→ '+(scoring.jackTeam===0?'You':'Opp')):'Not in play'],
+   ['Game', scoring.gameTeam!==null?(`${scoring.gp[0]}-${scoring.gp[1]} → `+(scoring.gameTeam===0?'You':'Opp')):`Tied ${scoring.gp[0]}-${scoring.gp[1]}`]
+  ].forEach(([l,v]) => { grid.innerHTML += `<span class="result-label">${l}</span><span>${v}</span>`; });
+
+  document.getElementById('result-score-line').innerHTML = `<div style="margin-top:8px;font-size:13px;">Score: <span class="team0-color">${old[0]} → ${G.scores[0]}</span> | <span class="team1-color">${old[1]} → ${G.scores[1]}</span></div>`;
+  log(`${made?'MADE':'SET'} — Score: ${G.scores[0]}-${G.scores[1]}`, 'score-change');
+  el.classList.add('show');
+
+  if (made && G.scores[bt] >= 21) {
+    setTimeout(() => {
+      el.classList.remove('show');
+      document.getElementById('go-title').textContent = bt===0?'You Win!':'Opponents Win';
+      document.getElementById('go-detail').textContent = `Final Score: ${G.scores[0]} - ${G.scores[1]} in ${G.handNum} hands`;
+      document.getElementById('game-over').classList.add('show');
+    }, 1500);
+  }
+}
+
+function nextHand() { document.getElementById('hand-result').classList.remove('show'); startHand(); }
+
+function log(msg, cls) {
+  const el = document.getElementById('log-panel');
+  const e = document.createElement('div'); e.className = `log-entry ${cls||''}`; e.textContent = msg;
+  el.appendChild(e); el.scrollTop = el.scrollHeight;
+}
+function clearLog() { document.getElementById('log-panel').innerHTML = ''; }
+
+// INIT
+document.getElementById('solver-toggle').classList.add('active');
+newGame();
+</script>
+
+
+</body></html>
