@@ -1783,6 +1783,7 @@ async function resumeFromBidding(gen) {
   await doBidding(gen);
   if (gen !== gameGeneration) return;
   G.leader = G.bidder;
+  saveHandSnapshot(); // preserve hand snapshot so goBack can double-pop from trick 0
   for (let t = 0; t < 6; t++) {
     if (gen !== gameGeneration) return;
     saveTrickSnapshot(t);
