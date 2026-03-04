@@ -419,12 +419,12 @@ body {
 /* ── SOLVER PANEL — narrow vertical left strip ── */
 #solver-panel {
   position: absolute;
-  bottom: 28px;
+  top: 70px;
   left: 28px;
   width: 190px;
   min-width: 140px;
   max-width: 350px;
-  max-height: 620px;
+  max-height: 520px;
   min-height: 60px;
   overflow-y: auto;
   overflow-x: hidden;
@@ -597,8 +597,11 @@ body {
   top: 28px;
   right: 28px;
   display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
   gap: 4px;
   z-index: 20;
+  max-width: 420px;
 }
 .ctrl-btn {
   padding: 6px 12px;
@@ -699,13 +702,14 @@ body {
   </div>
 
   <div id="top-controls">
-    <button class="ctrl-btn active" id="solver-toggle" onclick="toggleSolver()">Solver ON</button>
-    <button class="ctrl-btn" id="show-cards-btn" onclick="toggleShowCards()">Show Cards</button>
     <button class="ctrl-btn" id="back-btn" onclick="goBack()" style="opacity: 1;">← Back</button>
     <button class="ctrl-btn" onclick="newGame()">New Game</button>
     <span id="log-counter">0 logged</span>
     <button class="ctrl-btn" onclick="GameLog.exportJSON()">Export Log</button>
     <button class="ctrl-btn" onclick="if(confirm('Clear all logged data?'))GameLog.clear()">Clear Log</button>
+    <div style="width:100%"></div>
+    <button class="ctrl-btn active" id="solver-toggle" onclick="toggleSolver()">Solver ON</button>
+    <button class="ctrl-btn" id="show-cards-btn" onclick="toggleShowCards()">Show Cards</button>
   </div>
 
   <!-- Player areas -->
